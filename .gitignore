@@ -41,3 +41,6 @@ node_modules/
 
 # Qodo AI
 .qodo/
+
+# Local working notes / context (not part of the deliverable)
+eegcollab.txt
