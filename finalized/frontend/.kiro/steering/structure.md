@@ -11,8 +11,8 @@ camera -> tracker.py      MediaPipe HandLandmarker -> Hand (21 landmarks, handed
        -> ui.py           HandUI: cards, pages, radial menu (pure OpenCV drawing)
 classifier.py / record.py custom gesture samples, training, inference
 bridge.py                 local WebSocket + tiny HTTP server (stdlib)
-screening/                MotorLens (below)
-brain/                    Brain Explorer: EEG on a 3D brain (below)
+brain/                    Brain Explorer: the shipped product (below). run.py starts it with both model servers.
+screening/                Hand-function screening subsystem inherited from Hand UI; not part of the EEGenius demo (below)
 ```
 
 ## Gesture engine facts
@@ -27,7 +27,8 @@ One class, `Bridge(host, port, state_hz, routes, local_only)`.
 - `routes={"/": html_bytes}` serves pages over plain HTTP on the same port. `local_only=True` rejects non-localhost `Host` and `Origin` headers (DNS-rebinding and cross-site protection).
 - A stalled client is dropped after 0.25 s so it cannot freeze the camera loop.
 
-## MotorLens (`handui/screening/`)
+## Screening subsystem (`handui/screening/`)
+This is a self-contained hand-function screening tool carried over from the Hand UI base. It is not wired into the EEGenius `run.py` and is not part of the demo, but it works and its tests pass, so it is kept.
 | File | Role |
 | --- | --- |
 | `signals.py` | `Sample(t, pinch, fist, palm)` and `sample_from_hand`. Palm position is in palm sizes. |

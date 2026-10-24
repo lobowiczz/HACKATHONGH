@@ -5,25 +5,19 @@ inclusion: always
 # Product context
 
 ## What this repo is
-**Hand UI** is a webcam hand-gesture interface written in Python. **MotorLens** is a hackathon project built on top of it: a guided hand-function screening tool with a browser dashboard. A second, undecided hackathon project (climate, Massachusetts) is drafted in `.kiro/specs/shellfish-watch/`.
+**EEGenius Brain Explorer** is a hackathon project for neurological screening. You pick a patient the model has never seen, explore their data on a hand-tracked holographic 3D brain, and get a transparent AI analysis for ADHD (from EEG) or Parkinson's (from voice features).
 
-## Hackathon
-Software-only. Tracks considered: Education, Civic Education, Biotech/Healthcare, Energy, and **Track 3: Climate Tech**:
-- Resilient communities in a changing climate
-- Cleaner, more affordable buildings
-- A more reliable clean energy system
-- Understanding and protecting the ocean
-- Sustainable blue economy and coastal livelihoods
+It is built on **Hand UI**, a webcam hand-gesture interface written in Python (`handui/`). The gesture engine drives the 3D brain so the whole exploration is touchless, with mouse and keyboard as fallbacks.
 
-MotorLens targets Biotech/Healthcare. The climate draft targets "understanding and protecting the ocean" plus "sustainable blue economy" for Massachusetts.
+`finalized/` holds the full product: two FastAPI model servers (`backend/adhd`, `backend/parkinsons`), the hand-tracking frontend (`frontend/handui`), and `run.py`, which starts all three.
 
 ## Principles
-- **The hand must earn its place.** Gesture input is only worth building where touch or keyboard fails (gloved, wet or sterile hands) or where the hand itself is the data (MotorLens).
-- **Honest claims.** MotorLens is a screening and tracking aid, not a medical device, and never diagnoses. Its thresholds are illustrative and uncalibrated; the meaningful comparison is a person against their own earlier sessions.
-- **Local and private.** Video never leaves the machine. Only hand landmarks are analysed. Results go to a gitignored local file.
+- **The hand must earn its place.** Gesture input is only worth building where touch or keyboard fails, or where exploring in 3D is genuinely better by hand.
+- **Honest claims.** EEGenius is a research and demonstration tool, not a medical device, and never diagnoses. The app shows each model's real measured test performance next to its answer, including where a model is weak (the ADHD model performs about at chance on its held-out children, and the app says so).
+- **Only unseen patients.** The patient dropdown lists people from each model's test split only, never anyone the model trained on. The tests prove this.
+- **Local and private.** Video never leaves the machine. Only hand landmarks are analysed.
 - **Real vs simulated data are never mixed.** Anything synthetic is labelled and stored with `source: "simulated"`.
-- **Demo-proof.** Everything must run offline with a simulator or sample data if the camera, wifi or an API fails.
+- **Demo-proof.** Everything must run offline with sample data and `--no-camera` if the camera, wifi or an API fails.
 
 ## Users
-- MotorLens: people tracking motor function (Parkinson's, stroke recovery, arthritis) and the clinicians or therapists who see their trends.
-- Shellfish Watch (draft): Massachusetts shellfish growers working on docks and in hatcheries.
+Judges and anyone exploring the intersection of AI and neuroscience: choose a held-out ADHD or Parkinson's patient, explore their signals on the brain, and read a plain-language analysis with the model's honest track record.

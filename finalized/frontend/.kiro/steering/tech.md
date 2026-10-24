@@ -14,12 +14,14 @@ inclusion: always
 ```bash
 .venv/bin/python -m handui                              # gesture UI (OpenCV window)
 .venv/bin/python -m handui --bridge                     # same, plus a WebSocket stream on ws://127.0.0.1:8765
-.venv/bin/python -m handui screen                       # MotorLens, camera, dashboard at http://127.0.0.1:8765/
+.venv/bin/python -m handui screen                       # screening subsystem, camera, dashboard at http://127.0.0.1:8765/
 .venv/bin/python -m handui screen --simulate slowing    # no camera: healthy | slowing | tremor
 .venv/bin/python -m handui brain [--eeg FILE] [--no-camera]  # Brain Explorer (input -> explore -> analyze) at http://127.0.0.1:8765/
 .venv/bin/python -m handui record|train|labels|forget   # custom gestures
-.venv/bin/python -m unittest discover -s tests          # all tests (74 at last count)
+.venv/bin/python -m unittest discover -s tests          # frontend tests (75 at last count)
 ```
+
+The shipped product normally runs from `finalized/` with `python run.py` (camera) or `python run.py --no-camera`, which starts both model servers and the Brain Explorer together. On Windows use `.venv\Scripts\python.exe`.
 
 ## Environment gotchas
 - macOS camera permission belongs to the app that launched Python. Claude/Kiro may be denied; the user's own Terminal usually works. Camera runs fail with "not authorized to capture video" otherwise.
