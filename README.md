@@ -212,25 +212,4 @@ The ADHD module uses a more traditional deep learning approach with a 19-input n
 
 ---
 
-## 👤 Authors
-
-- **Adolf Lobowicz** — Co-Founder & Lead Architect — [LinkedIn](https://www.linkedin.com/in/adolf-lobowicz-497a6b372)
-- **Akriti Srivastava** — Co-Founder — [LinkedIn](https://www.linkedin.com/in/akriti-srivastava-575724321)
-
----
-
-## 📄 License
-
-This project is proprietary. All rights reserved. See the [Disclaimer](https://eegenius.co/disclaimer/) for usage terms.
-
----
-
 ## ⚕️ Medical Disclaimer
-
-EEGenius is a **demonstration and educational tool**. The predictions provided are **NOT medical diagnoses** and should not be used as a substitute for professional medical advice, diagnosis, or treatment. This system has not been evaluated or cleared by the FDA or any medical regulatory body. Always consult a qualified healthcare provider or neurologist for any medical concerns.
-
----
-
-<p align="center">
-  <sub>Built with ⚡ at the intersection of neuroscience and artificial intelligence</sub>
-</p>
