@@ -1,0 +1,1268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brain Explorer</title>
+<style>
+  :root {
+    --bg: #040714; --surface: rgba(12, 20, 44, .82); --surface-2: rgba(28, 44, 86, .55); --border: rgba(96, 160, 255, .18);
+    --text: #e8f3ff; --muted: #8ea6c9; --accent: #5fd4ff; --accent-2: #2f8cff; --accent-ink: #021026;
+    --warn: #ffc76a; --ok: #6be3a4; --danger: #ff8a7a; --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
+               font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  button { font: inherit; color: inherit; cursor: pointer; background: var(--surface-2); border: 1px solid var(--border);
+           border-radius: 10px; padding: 7px 12px; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-ink);
+                   border: 0; font-weight: 700; }
+  #app { display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: auto minmax(0, 1fr); height: 100vh; }
+  @media (max-width: 860px) { #app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 58vh auto; }
+                              header { padding: 10px 16px; } .steps { flex-wrap: wrap; }
+                              html, body { overflow: auto; } aside { border-left: 0 !important; } }
+
+  header { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; padding: 10px 20px; flex-wrap: wrap;
+           background: rgba(6, 11, 28, .9); border-bottom: 1px solid var(--border); position: relative; z-index: 2; }
+  .logo { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 17px; letter-spacing: .2px; }
+  .logo svg { width: 26px; height: 26px; }
+  .spacer { flex: 1; }
+  .steps { display: flex; gap: 6px; }
+  .steps button { display: flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 999px;
+                  background: transparent; color: var(--muted); }
+  .steps button b { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px;
+                    background: var(--surface-2); color: var(--muted); }
+  .steps button.on { color: var(--text); border-color: var(--accent); }
+  .steps button.on b { background: var(--accent); color: var(--accent-ink); }
+  .steps button.done b { background: rgba(95, 212, 255, .25); color: var(--accent); }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12.5px;
+          background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); white-space: nowrap; }
+  .pill i { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+  .pill.on i { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .pill.idle i { background: var(--warn); }
+
+  #stage { position: relative; min-height: 0; overflow: hidden;
+           background: radial-gradient(ellipse 70% 65% at 50% 46%, #0f2350 0%, #081231 45%, #040714 85%); }
+  #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+  #gl:active { cursor: grabbing; }
+  #labels { position: absolute; inset: 0; pointer-events: none; }
+  .lbl { position: absolute; transform: translate(-50%, calc(-100% - 12px)); white-space: nowrap; font-size: 11px;
+         padding: 2px 7px; border-radius: 999px; color: #d9f2ff; background: rgba(8, 20, 48, .55);
+         border: 1px solid rgba(110, 200, 255, .25); backdrop-filter: blur(3px); transition: opacity .2s; }
+  .lbl b { font-family: ui-monospace, Menlo, monospace; font-weight: 700; }
+  .lbl span { color: var(--muted); margin-left: 5px; }
+  .lbl.strong { border-color: rgba(160, 230, 255, .7); box-shadow: 0 0 12px rgba(95, 212, 255, .35); }
+  .lbl.sel { background: rgba(230, 248, 255, .95); color: #04112b; border-color: #fff; }
+  .lbl.sel span { color: #22406e; }
+  .overlay { position: absolute; background: rgba(8, 16, 40, .72); border: 1px solid var(--border); border-radius: 12px;
+             padding: 8px 12px; font-size: 12px; color: var(--muted); backdrop-filter: blur(6px); }
+  #legend { left: 16px; bottom: 14px; }
+  #legend .row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+  #legend .dot { border-radius: 50%; background: radial-gradient(circle, #fff 0%, #7fe0ff 35%, rgba(47, 140, 255, 0) 70%); }
+  #zoomGauge { left: 16px; top: 16px; width: 150px; display: none; }
+  #zoomGauge .track { height: 6px; border-radius: 3px; background: rgba(95, 212, 255, .15); margin: 6px 0 2px; position: relative; }
+  #zoomGauge .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px;
+                     background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+  #zoomGauge .ends { display: flex; justify-content: space-between; font-size: 11px; }
+  #empty { inset: auto 0 22% 0; margin: 0 auto; width: fit-content; max-width: 90%; text-align: center; font-size: 13px; }
+
+  aside { background: rgba(6, 11, 28, .92); border-left: 1px solid var(--border); overflow: auto; padding: 16px 18px;
+          display: grid; gap: 16px; align-content: start; }
+  h2 { margin: 0 0 6px; font-size: 12px; letter-spacing: .9px; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  h3 { margin: 0 0 6px; font-size: 13px; color: var(--muted); font-weight: 650; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .big { font-size: 28px; font-weight: 750; line-height: 1.1; }
+  .sub { color: var(--muted); }
+  .note { color: var(--muted); font-size: 12.5px; margin: 8px 0 0; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+  .grow { flex: 1; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 6px 0 10px; }
+  .seg button { text-align: left; padding: 8px 10px; display: grid; gap: 1px; font-weight: 650; }
+  .seg button span { font-size: 11.5px; font-weight: 400; color: var(--muted); }
+  .seg button.on { border-color: var(--accent); background: rgba(95, 212, 255, .12); }
+  .picker { margin-top: 10px; }
+  .picker-btn { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 12px; }
+  .picker-btn > span { flex: 1; display: grid; }
+  .picker small { color: var(--muted); font-size: 12px; }
+  .picker-btn svg { width: 16px; height: 16px; color: var(--accent); transition: transform .15s; flex: none; }
+  .picker-btn[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .picker-pop { margin-top: 6px; border: 1px solid var(--border); border-radius: 12px; background: rgba(4, 9, 26, .96); padding: 8px; }
+  .picker-pop input { margin-bottom: 6px; }
+  /* exactly three options visible; scroll for the rest */
+  .picker ul { list-style: none; margin: 0; padding: 0; height: 150px; overflow-y: auto; scroll-snap-type: y mandatory;
+               overscroll-behavior: contain; outline: none; }
+  .picker li { height: 50px; padding: 7px 10px; border-radius: 8px; display: grid; align-content: center; cursor: pointer;
+               scroll-snap-align: start; }
+  .picker li.active { background: var(--surface-2); }
+  .picker li[aria-selected="true"] { background: rgba(95, 212, 255, .16); box-shadow: inset 3px 0 0 var(--accent); }
+  .picker li.none { color: var(--muted); cursor: default; }
+  .picker-count { font-size: 11.5px; color: var(--muted); margin-top: 6px; text-align: right; }
+  input[type=search] { font: inherit; color: var(--text); background: rgba(6, 12, 30, .8); border: 1px solid var(--border);
+                       border-radius: 8px; padding: 6px 9px; width: 100%; }
+  input[type=search]:focus { outline: none; border-color: var(--accent); }
+  .vals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px 12px; margin: 4px 0 10px; }
+  .vals.wide { grid-template-columns: 1fr; }
+  .val { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; padding: 2px 0;
+         border-bottom: 1px dashed rgba(96, 160, 255, .12); }
+  .val b { font: 700 12px ui-monospace, Menlo, monospace; color: var(--accent); }
+  .vals.wide .val b { font: 500 12.5px system-ui, -apple-system, sans-serif; color: var(--text); }
+  .val span { font-variant-numeric: tabular-nums; }
+  .prob { margin: 12px 0 6px; }
+  .prob-bar { position: relative; height: 12px; border-radius: 6px; background: rgba(95, 212, 255, .12); }
+  .prob-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+  .pos .prob-bar i { background: linear-gradient(90deg, #ff8f5a, var(--warn)); }
+  .prob-bar .thr { position: absolute; left: 50%; top: -4px; bottom: -4px; width: 2px; background: #fff; opacity: .75; }
+  .prob-ends { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); margin-top: 5px; }
+  .prob-ends b { color: var(--text); }
+  .truth { margin-top: 10px; padding: 8px 10px; border-radius: 10px; display: grid; gap: 2px; font-size: 13px; }
+  .truth.ok { background: rgba(107, 227, 164, .08); border: 1px solid rgba(107, 227, 164, .35); }
+  .truth.ok > b { color: var(--ok); }
+  .truth.miss { background: rgba(255, 138, 122, .07); border: 1px solid rgba(255, 138, 122, .35); }
+  .truth.miss > b { color: var(--danger); }
+  .drv { width: 100%; display: grid; grid-template-columns: 40px 1fr auto; gap: 8px; align-items: center; text-align: left;
+         padding: 5px 8px; margin-top: 3px; background: transparent; border-color: transparent; }
+  .drv:hover { background: var(--surface-2); border-color: var(--border); }
+  .drv.static { grid-template-columns: 1fr auto; cursor: default; }
+  .drv.static:hover { background: transparent; border-color: transparent; }
+  .drv b { font: 700 12px ui-monospace, Menlo, monospace; color: var(--accent); }
+  .drv small { display: block; color: var(--muted); font-size: 11.5px; }
+  .drv em { font-style: normal; font-variant-numeric: tabular-nums; }
+  .up { color: #ffb38a; }
+  .down { color: #8fd0ff; }
+  ul.info { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 6px; }
+  details { margin-top: 8px; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin-top: 10px; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .meter { height: 8px; border-radius: 4px; background: rgba(95, 212, 255, .12); overflow: hidden; margin-top: 4px; }
+  .meter i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent-2), #c9f1ff); }
+  .rank { display: grid; gap: 3px; }
+  .rank button { display: grid; grid-template-columns: 36px 1fr 64px; align-items: center; gap: 8px; text-align: left;
+                 padding: 4px 8px; border-radius: 8px; background: transparent; border: 1px solid transparent; }
+  .rank button:hover, .rank button.sel { background: var(--surface-2); border-color: var(--border); }
+  .rank b { font-family: ui-monospace, Menlo, monospace; color: var(--accent); }
+  .rank .meter { margin: 0; }
+  .rank span:last-child { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12.5px; }
+  pre { margin: 8px 0 0; padding: 10px; border-radius: 10px; background: rgba(2, 6, 18, .9); border: 1px solid var(--border);
+        font-size: 11.5px; max-height: 190px; overflow: auto; color: #bfe6ff; }
+  .result { border-radius: 12px; padding: 12px 14px; margin-top: 10px; border: 1px dashed rgba(255, 199, 106, .45);
+            background: rgba(255, 199, 106, .06); }
+  .result b { color: var(--warn); }
+  .missing { color: var(--warn); }
+  .help { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 13px; }
+  .help dt { font-weight: 650; }
+  .help dd { margin: 0; color: var(--muted); }
+
+  #cursor { position: fixed; left: 0; top: 0; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%;
+            border: 2px solid #dff6ff; box-shadow: 0 0 14px rgba(95, 212, 255, .7); pointer-events: none; display: none;
+            z-index: 40; transition: transform .08s, background .08s; }
+  #cursor.grab { background: var(--accent); border-color: var(--accent); transform: scale(.72); }
+  #cursor .ring { position: absolute; inset: -9px; border-radius: 50%;
+                  background: conic-gradient(var(--accent) calc(var(--p, 0) * 1turn), transparent 0);
+                  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+                  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); }
+  #menu { position: fixed; left: 0; top: 0; width: 300px; height: 300px; margin: -150px 0 0 -150px; display: none;
+          z-index: 30; pointer-events: none; }
+  #menu .disc { position: absolute; inset: 0; border-radius: 50%; background: rgba(8, 16, 40, .9);
+                border: 1px solid rgba(95, 212, 255, .35); box-shadow: 0 0 40px rgba(47, 140, 255, .35); }
+  #menu .item { position: absolute; width: 104px; margin: -17px 0 0 -52px; padding: 7px 0; border-radius: 999px;
+                text-align: center; font-weight: 650; font-size: 13px; }
+  #menu .item.on { background: var(--accent); color: var(--accent-ink); box-shadow: 0 0 16px rgba(95, 212, 255, .7); }
+  #menu .hub { position: absolute; left: 50%; top: 50%; width: 76px; height: 76px; margin: -38px 0 0 -38px; border-radius: 50%;
+               background: var(--bg); display: grid; place-items: center; color: var(--muted); font-size: 12px; }
+  #menu .hint { position: absolute; left: 0; right: 0; top: 100%; margin-top: 10px; text-align: center; font-size: 12.5px; }
+  #toasts { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); display: grid; gap: 8px;
+            justify-items: center; z-index: 50; pointer-events: none; }
+  .toast { background: rgba(10, 22, 52, .95); border: 1px solid rgba(95, 212, 255, .35); padding: 8px 16px; border-radius: 999px;
+           animation: toast 2.6s forwards; white-space: nowrap; box-shadow: 0 0 20px rgba(47, 140, 255, .25); }
+  @keyframes toast { 0% { opacity: 0; transform: translateY(8px); } 8%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 32 32" fill="none" stroke="#5fd4ff" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+        <path d="M16 6c-3-3-9-2-9 3-3 1-4 6-1 8-1 4 2 7 6 7 1 2 3 3 4 2V6z"/><path d="M16 6c3-3 9-2 9 3 3 1 4 6 1 8 1 4-2 7-6 7-1 2-3 3-4 2"/>
+        <circle cx="11" cy="13" r="1.6" fill="#fff"/><circle cx="21" cy="17" r="1.6" fill="#fff"/>
+      </svg>
+      Brain Explorer
+    </div>
+    <nav class="steps" aria-label="Workflow">
+      <button data-step="1"><b>1</b>Input</button>
+      <button data-step="2"><b>2</b>Explore</button>
+      <button data-step="3"><b>3</b>Analyze</button>
+    </nav>
+    <div class="spacer"></div>
+    <span id="src" class="pill">No patient chosen</span>
+    <span id="handPill" class="pill"><i></i><span>Connecting</span></span>
+  </header>
+
+  <div id="stage">
+    <canvas id="gl" aria-label="Transparent 3D brain with EEG regions lit by strength"></canvas>
+    <div id="labels"></div>
+    <div id="zoomGauge" class="overlay">Hand distance zoom<div class="track"><div class="fill" id="zoomFill"></div></div>
+      <div class="ends"><span>far</span><span>close</span></div></div>
+    <div id="legend" class="overlay"></div>
+    <div id="empty" class="overlay"></div>
+  </div>
+
+  <aside id="panel"></aside>
+</div>
+<div id="cursor"><div class="ring"></div></div>
+<div id="menu"><div class="disc"></div><div class="hub">close</div><div class="hint">Point at an item, then make a fist</div></div>
+<div id="toasts"></div>
+
+<script>
+"use strict";
+// Each condition has its own model server; the addresses arrive in the init message.
+// The patient lists hold only people from each model's test split, never seen in training.
+const CONDITIONS = {
+  adhd: { name: "ADHD", data: "EEG, 19 channels", person: "child", positive: "ADHD",
+          label: s => `Child ${s.subject}`, sub: s => `2-second window ${s.window} of ${s.windows}`,
+          count: l => `${l.samples.length} EEG windows from ${l.n_people} children` },
+  parkinsons: { name: "Parkinson's", data: "voice recording", person: "person", positive: "Parkinsons",
+                label: s => `Person ${s.person_id}`, sub: s => `recording ${s.recording} of ${s.recordings}`,
+                count: l => `${l.samples.length} voice recordings from ${l.n_people} people` },
+};
+// The Parkinson's data is a voice recording, not EEG, so none of it maps to an electrode. These sites sit
+// over the areas that plan, produce and monitor speech, and are lit for reference only.
+const SPEECH_AREAS = { F7: 0.9, C3: 0.75, C4: 0.75, T7: 0.6, Cz: 0.5 };
+const MEANING = {
+  adhd: ["This is a research demonstration based on two seconds of EEG. It is not a diagnosis.",
+         "ADHD is diagnosed by a qualified clinician from a detailed history, rating scales from home and school, and by ruling out other causes. EEG is not used on its own to diagnose it.",
+         "If attention, impulsivity or restlessness is affecting daily life, talk to a doctor. Support such as behavioural strategies, school adjustments and medication helps many people."],
+  parkinsons: ["This is a research demonstration based on one voice recording. It is not a diagnosis.",
+               "Parkinson's is diagnosed by a neurologist from movement signs such as slowness, tremor and stiffness. Softer, flatter or hoarser speech is common and can appear early.",
+               "If you notice these changes, see a doctor. Medication, exercise and speech therapy help many people."],
+};
+
+// ======================================================================= math
+// Quaternions are [x, y, z, w]; matrices are column-major arrays of 16.
+const Q = {
+  axis(a, ang) { const s = Math.sin(ang / 2); return [a[0] * s, a[1] * s, a[2] * s, Math.cos(ang / 2)]; },
+  mul(a, b) {
+    return [a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1],
+            a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0],
+            a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3],
+            a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]];
+  },
+  norm(q) { const l = Math.hypot(q[0], q[1], q[2], q[3]) || 1; return q.map(v => v / l); },
+  slerp(a, b, t) {
+    let d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
+    if (d < 0) { b = b.map(v => -v); d = -d; }
+    if (d > 0.9995) return Q.norm(a.map((v, i) => v + (b[i] - v) * t));
+    const th = Math.acos(d), s = Math.sin(th), wa = Math.sin((1 - t) * th) / s, wb = Math.sin(t * th) / s;
+    return a.map((v, i) => v * wa + b[i] * wb);
+  },
+  rot(q, v) {
+    const [x, y, z, w] = q;
+    const ix = w * v[0] + y * v[2] - z * v[1], iy = w * v[1] + z * v[0] - x * v[2];
+    const iz = w * v[2] + x * v[1] - y * v[0], iw = -x * v[0] - y * v[1] - z * v[2];
+    return [ix * w + iw * -x + iy * -z - iz * -y, iy * w + iw * -y + iz * -x - ix * -z, iz * w + iw * -z + ix * -y - iy * -x];
+  },
+  mat(q) {
+    const [x, y, z, w] = q, xx = x * x, yy = y * y, zz = z * z, xy = x * y, xz = x * z, yz = y * z, wx = w * x, wy = w * y, wz = w * z;
+    return [1 - 2 * (yy + zz), 2 * (xy + wz), 2 * (xz - wy), 0, 2 * (xy - wz), 1 - 2 * (xx + zz), 2 * (yz + wx), 0,
+            2 * (xz + wy), 2 * (yz - wx), 1 - 2 * (xx + yy), 0, 0, 0, 0, 1];
+  },
+};
+const perspective = (fovy, aspect, n, f) => {
+  const t = 1 / Math.tan(fovy / 2), nf = 1 / (n - f);
+  return [t / aspect, 0, 0, 0, 0, t, 0, 0, 0, 0, (f + n) * nf, -1, 0, 0, 2 * f * n * nf, 0];
+};
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const toGL = (x, y, z) => [-x, z, y]; // head (x right ear, y nose, z up) -> GL (x screen right, y up, z toward viewer)
+const rng = (() => { let s = 20261024; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+
+// 3D simplex noise (after Stefan Gustavson's public-domain reference), fixed seed.
+const noise = (() => {
+  const g = [[1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],[1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],[0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]];
+  const p = new Uint8Array(256).map((_, i) => i);
+  let seed = 1337;
+  for (let i = 255; i > 0; i--) { seed = (seed * 16807) % 2147483647; const j = seed % (i + 1); [p[i], p[j]] = [p[j], p[i]]; }
+  const perm = new Uint8Array(512), pm = new Uint8Array(512);
+  for (let i = 0; i < 512; i++) { perm[i] = p[i & 255]; pm[i] = perm[i] % 12; }
+  const F3 = 1 / 3, G3 = 1 / 6;
+  const corner = (gi, x, y, z) => { let t = 0.6 - x * x - y * y - z * z; if (t < 0) return 0; t *= t; const v = g[gi]; return t * t * (v[0] * x + v[1] * y + v[2] * z); };
+  return (xin, yin, zin) => {
+    const s = (xin + yin + zin) * F3, i = Math.floor(xin + s), j = Math.floor(yin + s), k = Math.floor(zin + s);
+    const t = (i + j + k) * G3, x0 = xin - (i - t), y0 = yin - (j - t), z0 = zin - (k - t);
+    let i1, j1, k1, i2, j2, k2;
+    if (x0 >= y0) {
+      if (y0 >= z0) { i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 1; k2 = 0; }
+      else if (x0 >= z0) { i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 0; k2 = 1; }
+      else { i1 = 0; j1 = 0; k1 = 1; i2 = 1; j2 = 0; k2 = 1; }
+    } else {
+      if (y0 < z0) { i1 = 0; j1 = 0; k1 = 1; i2 = 0; j2 = 1; k2 = 1; }
+      else if (x0 < z0) { i1 = 0; j1 = 1; k1 = 0; i2 = 0; j2 = 1; k2 = 1; }
+      else { i1 = 0; j1 = 1; k1 = 0; i2 = 1; j2 = 1; k2 = 0; }
+    }
+    const ii = i & 255, jj = j & 255, kk = k & 255;
+    return 32 * (corner(pm[ii + perm[jj + perm[kk]]], x0, y0, z0)
+      + corner(pm[ii + i1 + perm[jj + j1 + perm[kk + k1]]], x0 - i1 + G3, y0 - j1 + G3, z0 - k1 + G3)
+      + corner(pm[ii + i2 + perm[jj + j2 + perm[kk + k2]]], x0 - i2 + 2 * G3, y0 - j2 + 2 * G3, z0 - k2 + 2 * G3)
+      + corner(pm[ii + 1 + perm[jj + 1 + perm[kk + 1]]], x0 - 1 + 3 * G3, y0 - 1 + 3 * G3, z0 - 1 + 3 * G3));
+  };
+})();
+
+// =================================================================== geometry
+function icosphere(level) {
+  const t = (1 + Math.sqrt(5)) / 2, nrm = v => { const l = Math.hypot(...v); return [v[0] / l, v[1] / l, v[2] / l]; };
+  const verts = [[-1,t,0],[1,t,0],[-1,-t,0],[1,-t,0],[0,-1,t],[0,1,t],[0,-1,-t],[0,1,-t],[t,0,-1],[t,0,1],[-t,0,-1],[-t,0,1]].map(nrm);
+  let faces = [[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],
+               [3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]];
+  for (let l = 0; l < level; l++) {
+    const cache = new Map(), next = [];
+    const mid = (a, b) => {
+      const key = a < b ? a * 1e6 + b : b * 1e6 + a;
+      let i = cache.get(key);
+      if (i === undefined) { const p = verts[a], q = verts[b]; verts.push(nrm([p[0] + q[0], p[1] + q[1], p[2] + q[2]])); i = verts.length - 1; cache.set(key, i); }
+      return i;
+    };
+    for (const [a, b, c] of faces) { const ab = mid(a, b), bc = mid(b, c), ca = mid(c, a); next.push([a, ab, ca], [b, bc, ab], [c, ca, bc], [ab, bc, ca]); }
+    faces = next;
+  }
+  return { verts, index: new Uint32Array(faces.flat()) };
+}
+function edgesOf(index) {   // unique triangle edges, for the fine wire mesh
+  const seen = new Set(), out = [];
+  for (let f = 0; f < index.length; f += 3) for (const [a, b] of [[index[f], index[f + 1]], [index[f + 1], index[f + 2]], [index[f + 2], index[f]]]) {
+    const key = a < b ? a * 1e6 + b : b * 1e6 + a;
+    if (!seen.has(key)) { seen.add(key); out.push(a, b); }
+  }
+  return new Uint32Array(out);
+}
+function computeNormals(pos, idx) {
+  const n = new Float32Array(pos.length);
+  for (let f = 0; f < idx.length; f += 3) {
+    const a = idx[f] * 3, b = idx[f + 1] * 3, c = idx[f + 2] * 3;
+    const ux = pos[b] - pos[a], uy = pos[b + 1] - pos[a + 1], uz = pos[b + 2] - pos[a + 2];
+    const vx = pos[c] - pos[a], vy = pos[c + 1] - pos[a + 1], vz = pos[c + 2] - pos[a + 2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    for (const k of [a, b, c]) { n[k] += nx; n[k + 1] += ny; n[k + 2] += nz; }
+  }
+  for (let i = 0; i < n.length; i += 3) { const l = Math.hypot(n[i], n[i + 1], n[i + 2]) || 1; n[i] /= l; n[i + 1] /= l; n[i + 2] /= l; }
+  return n;
+}
+
+// Cerebrum radius along a head-space direction. Without detail it is the smooth
+// envelope used to place region lights; with detail it adds the fissures and folds.
+function brainShape(d, detail) {
+  const [x, y, z] = d;
+  const ax = 0.70 * (1 - 0.10 * Math.max(y, 0) + 0.04 * Math.max(-y, 0)), ay = 0.90, az = z > 0 ? 0.66 : 0.48;
+  let r = 1 / Math.sqrt((x / ax) ** 2 + (y / ay) ** 2 + (z / az) ** 2);
+  r += 0.08 * Math.exp(-(((Math.abs(x) - 0.72) / 0.22) ** 2 + ((z + 0.42) / 0.2) ** 2 + ((y - 0.05) / 0.4) ** 2)); // temporal lobes
+  r -= 0.05 * smooth(0.25, 0.75, y) * smooth(0, -0.5, z);                                                     // orbital surface
+  if (!detail) return { r, g: 1 };
+  r -= 0.12 * Math.exp(-((x / 0.055) ** 2)) * smooth(-0.3, 0.25, z);                                          // longitudinal fissure
+  const syl = -0.18 + 0.32 * (0.35 - y);
+  r -= 0.05 * Math.exp(-(((z - syl) / 0.045) ** 2)) * smooth(0.3, 0.6, Math.abs(x)) * smooth(-0.5, -0.2, y) * smooth(0.55, 0.3, y); // lateral fissure
+  const f = 3.2;
+  const wx = noise(x * 1.7 + 3.1, y * 1.7, z * 1.7) * 0.45, wy = noise(x * 1.7, y * 1.7 + 7.3, z * 1.7) * 0.45;
+  const wz = noise(x * 1.7, y * 1.7, z * 1.7 + 1.9) * 0.45;
+  const n = noise(x * f + wx, y * f + wy, z * f + wz) + 0.4 * noise(x * f * 2.2 + wz, y * f * 2.2 + wx, z * f * 2.2 + wy);
+  const g = Math.pow(Math.min(1, Math.abs(n) * 1.6), 0.5); // 0 in a sulcus, 1 on top of a gyrus
+  return { r: r + 0.036 * (g - 0.65), g };
+}
+
+function buildBrain() {
+  const { verts, index } = icosphere(6);
+  const n = verts.length, pos = new Float32Array(n * 3), dirs = new Float32Array(n * 3), glow = new Float32Array(n * 4);
+  verts.forEach((d, i) => {
+    const { r, g } = brainShape(d, true);
+    pos.set(toGL(d[0] * r, d[1] * r, d[2] * r), i * 3);
+    dirs.set(d, i * 3);
+    glow[i * 4 + 3] = g;
+  });
+  return { pos, index, edges: edgesOf(index), normals: computeNormals(pos, index), dirs, glow, count: n };
+}
+function buildCerebellum() {
+  const { verts, index } = icosphere(4), c = [0, -0.50, -0.31], R = [0.40, 0.24, 0.18];
+  const pos = new Float32Array(verts.length * 3), glow = new Float32Array(verts.length * 4);
+  verts.forEach(([x, y, z], i) => {
+    const folia = Math.sin(Math.atan2(z, -y) * 26), k = 1 + 0.035 * folia - 0.08 * Math.exp(-((x / 0.12) ** 2)) * smooth(-0.2, -0.7, y);
+    pos.set(toGL(c[0] + x * R[0] * k, c[1] + y * R[1] * k, c[2] + z * R[2] * k), i * 3);
+    glow[i * 4 + 3] = 0.5 + 0.5 * folia;
+  });
+  return { pos, index, edges: edgesOf(index), normals: computeNormals(pos, index), glow };
+}
+function buildStem() {
+  const seg = 24, rings = 12, pos = [], idx = [];
+  for (let r = 0; r <= rings; r++) {
+    const t = r / rings, cy = -0.18 - 0.07 * t, cz = -0.28 - 0.70 * t, rad = 0.15 - 0.05 * t;
+    for (let s = 0; s < seg; s++) { const a = s / seg * Math.PI * 2; pos.push(...toGL(Math.cos(a) * rad, cy + Math.sin(a) * rad * 0.8, cz)); }
+  }
+  for (let r = 0; r < rings; r++) for (let s = 0; s < seg; s++) {
+    const a = r * seg + s, b = r * seg + (s + 1) % seg;
+    idx.push(a, a + seg, b, b, a + seg, b + seg);
+  }
+  const p = new Float32Array(pos), index = new Uint32Array(idx), glow = new Float32Array(p.length / 3 * 4);
+  for (let i = 3; i < glow.length; i += 4) glow[i] = 0.7;
+  return { pos: p, index, edges: edgesOf(index), normals: computeNormals(p, index), glow };
+}
+
+// ===================================================================== WebGL
+// Everything is drawn additively without depth testing, so the brain reads as a
+// glowing transparent shell and the region lights show through from behind.
+const canvas = document.getElementById("gl");
+const gl = canvas.getContext("webgl2", { antialias: true, alpha: true, premultipliedAlpha: true });
+const HOLO_VS = `#version 300 es
+layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNormal; layout(location=2) in vec4 aGlow;
+uniform mat4 uProj, uView, uModel;
+out vec3 vN, vW; out vec4 vGlow;
+void main() { vec4 w = uModel * vec4(aPos, 1.0); vW = w.xyz; vN = mat3(uModel) * aNormal; vGlow = aGlow;
+  gl_Position = uProj * uView * w; }`;
+const HOLO_FS = `#version 300 es
+precision highp float;
+in vec3 vN, vW; in vec4 vGlow;
+uniform vec3 uEye; uniform float uBody, uRim, uGlow;
+out vec4 o;
+void main() {
+  vec3 N = normalize(vN), V = normalize(uEye - vW);
+  float fres = pow(1.0 - abs(dot(N, V)), 2.2);
+  float near = 0.5 + 0.5 * smoothstep(-1.0, 0.9, vW.z);
+  vec3 tint = mix(vec3(0.04, 0.20, 0.55), vec3(0.32, 0.78, 1.0), fres);
+  vec3 c = tint * (uBody * mix(0.18, 1.55, vGlow.a) + uRim * fres) * near + vGlow.rgb * uGlow * (0.45 + 0.55 * near);
+  o = vec4(c, max(c.r, max(c.g, c.b)));
+}`;
+const SPARK_VS = `#version 300 es
+layout(location=0) in vec3 aPos; layout(location=1) in float aSize; layout(location=2) in float aBright;
+uniform mat4 uProj, uView, uModel; uniform float uPx, uTime;
+out float vB;
+void main() {
+  vec4 w = uModel * vec4(aPos, 1.0); gl_Position = uProj * uView * w;
+  float twinkle = 0.86 + 0.14 * sin(uTime * 2.3 + float(gl_VertexID) * 1.73);
+  gl_PointSize = min(aSize * uPx / gl_Position.w * twinkle, 220.0);
+  vB = aBright * twinkle * (0.55 + 0.45 * smoothstep(-1.0, 0.9, w.z));
+}`;
+const SPARK_FS = `#version 300 es
+precision highp float;
+in float vB; out vec4 o;
+void main() {
+  vec2 p = gl_PointCoord * 2.0 - 1.0; float r2 = dot(p, p);
+  float core = exp(-r2 * 22.0), halo = exp(-r2 * 4.0) * 0.42;
+  float flare = exp(-abs(p.y) * 30.0) * exp(-abs(p.x) * 2.6) + exp(-abs(p.x) * 30.0) * exp(-abs(p.y) * 2.6);
+  float a = (core + halo + flare * 0.55) * vB;
+  vec3 c = mix(vec3(0.35, 0.75, 1.0), vec3(1.0), clamp(core * 1.4, 0.0, 1.0)) * a;
+  o = vec4(c, max(c.r, max(c.g, c.b)));
+}`;
+const LINE_VS = `#version 300 es
+layout(location=0) in vec3 aPos; layout(location=1) in float aAlpha;
+uniform mat4 uProj, uView, uModel; uniform float uTime;
+out float vA;
+void main() {
+  vec4 w = uModel * vec4(aPos, 1.0); gl_Position = uProj * uView * w;
+  float shimmer = 0.75 + 0.25 * sin(uTime * 1.4 + aPos.x * 6.0 + aPos.y * 4.0 + aPos.z * 5.0);
+  vA = aAlpha * shimmer * (0.45 + 0.55 * smoothstep(-1.2, 0.9, w.z));
+}`;
+const LINE_FS = `#version 300 es
+precision highp float;
+in float vA; out vec4 o;
+void main() { vec3 c = vec3(0.55, 0.85, 1.0) * vA; o = vec4(c, max(c.r, max(c.g, c.b))); }`;
+
+const P = {};
+function program(vs, fs, names) {
+  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+  const p = gl.createProgram();
+  gl.attachShader(p, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const u = {}; for (const n of names) u[n] = gl.getUniformLocation(p, n);
+  return { p, u };
+}
+function buffer(data, usage = gl.STATIC_DRAW) { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, data, usage); return b; }
+function holoMesh(m) {   // one set of vertex buffers, drawn as triangles and as a wire mesh
+  const bPos = buffer(m.pos), bNrm = buffer(m.normals), bGlow = buffer(m.glow, gl.DYNAMIC_DRAW);
+  const vao = idx => {
+    const v = gl.createVertexArray(); gl.bindVertexArray(v);
+    for (const [loc, b, size] of [[0, bPos, 3], [1, bNrm, 3], [2, bGlow, 4]]) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
+    }
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+    gl.bindVertexArray(null);
+    return { vao: v, count: idx.length };
+  };
+  return { tri: vao(m.index), wire: vao(m.edges), glowBuf: bGlow };
+}
+function interleaved(floatsPerVertex, layout) {   // layout: [[location, size], ...]
+  const buf = gl.createBuffer(), v = gl.createVertexArray();
+  gl.bindVertexArray(v); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  let off = 0;
+  for (const [loc, size] of layout) { gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, size, gl.FLOAT, false, floatsPerVertex * 4, off * 4); off += size; }
+  gl.bindVertexArray(null);
+  return { vao: v, buf, count: 0 };
+}
+function upload(target, data) { gl.bindBuffer(gl.ARRAY_BUFFER, target.buf); gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW); }
+
+// ================================================================ app state
+const $ = id => document.getElementById(id);
+const HOME = Q.norm(Q.mul(Q.axis([1, 0, 0], 0.22), Q.axis([0, 1, 0], -1.25))); // left side view, slightly from above
+const ROT_GAIN = 5.0, DMIN = 1.7, DMAX = 6.0;
+const MENU_ITEMS = [["Overview", "overview"], ["Strongest", "strongest"], ["Labels", "labels"],
+                    ["Network", "lines"], ["Hand zoom", "handzoom"], ["Analyze", "analyze"]];
+let brain, cere, stem, sparks, links;
+let montage = null, codes = [], eegOrder = [], cameraOn = false, gauss = null, plexus = [];
+let values = {}, strength = {}, order = [];
+let condition = "adhd", apis = {}, catalog = {}, catalogError = {}, sample = null;
+let analysis = null, analysisError = null, analyzing = false, lastRequest = null, pickerOpen = false, pickerFilter = "";
+let step = 1, selected = null, hovered = null, labelsOn = true, linesOn = true, handZoom = true;
+let rot = HOME.slice(), anim = null, vel = [0, 0], dist = 3.9, distTarget = 3.9, lastInput = 0, screen = {};
+const hand = { present: false, x: 0.5, y: 0.5, grabbing: false, progress: 0, seen: 0 };
+const zoomCtl = { base: null, baseDist: 3.9, ema: null };
+let drag = null, mouse = null, mdrag = null, menuOpen = false, menuAt = [0, 0], menuHover = -1;
+let dirtyGlow = true, dirtySparks = true;
+
+// ============================================================ regions & data
+function regionPos(code, inset = 0.9) {   // light sits just inside the cortex under the electrode
+  const p = montage[code].pos, r = brainShape(p, false).r * inset;
+  return toGL(p[0] * r, p[1] * r, p[2] * r);
+}
+function prepareRegions() {
+  codes = Object.keys(montage);
+  const n = brain.count, k = codes.length, dirs = codes.map(c => montage[c].pos);
+  gauss = new Float32Array(n * k);   // how much each surface point belongs to each region
+  for (let v = 0; v < n; v++) {
+    const d = brain.dirs.subarray(v * 3, v * 3 + 3);
+    for (let j = 0; j < k; j++) {
+      const e = dirs[j], a = Math.acos(clamp(d[0] * e[0] + d[1] * e[1] + d[2] * e[2], -1, 1));
+      gauss[v * k + j] = Math.exp(-((a / 0.30) ** 2));
+    }
+  }
+  buildNetwork();
+}
+// A decorative web like the reference image: a band of points around the brain,
+// joined to their neighbours, plus links from each region light to nearby points
+// and to its neighbouring regions. Line brightness follows region strength.
+function buildNetwork() {
+  plexus = [];
+  for (let i = 0; i < 64; i++) {
+    const a = rng() * Math.PI * 2, rad = 0.62 + rng() * 0.75, y = -0.06 + (rng() - 0.5) * 0.36 + 0.10 * Math.sin(a * 2);
+    plexus.push([Math.cos(a) * rad, y, Math.sin(a) * rad * 1.1]);
+  }
+  const near = (p, list, k, maxD) => list.map((q, i) => [Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]), i])
+    .filter(([d]) => d > 1e-6 && d < maxD).sort((a, b) => a[0] - b[0]).slice(0, k).map(([, i]) => i);
+  links = { ...links, pairs: [] };
+  const seen = new Set(), add = (kind, a, b) => { const key = `${kind}${Math.min(a, b)}-${Math.max(a, b)}`; if (!seen.has(key)) { seen.add(key); links.pairs.push([kind, a, b]); } };
+  plexus.forEach((p, i) => near(p, plexus, 3, 0.55).forEach(j => add("pp", i, j)));
+  const rp = codes.map(c => regionPos(c));
+  rp.forEach((p, i) => { near(p, rp, 3, 0.9).forEach(j => add("rr", i, j)); near(p, plexus, 2, 0.8).forEach(j => add("rp", i, j)); });
+}
+
+// ADHD: each electrode's amplitude lights its region; the highest value in the recording is brightest.
+function setValues(next) {
+  values = {};
+  for (const c of codes) if (Number.isFinite(next[c])) values[c] = next[c];
+  const present = codes.filter(c => c in values), vs = present.map(c => values[c]);
+  const lo = Math.min(...vs), hi = Math.max(...vs);
+  strength = {};
+  for (const c of present) strength[c] = present.length === 1 || hi === lo ? 1 : (values[c] - lo) / (hi - lo);
+  order = present.sort((a, b) => values[b] - values[a]);
+  if (selected && !(selected in strength)) selected = null;
+  dirtyGlow = dirtySparks = true;
+}
+// Parkinson's: light the speech areas as a reference; the recording's measures are shown in the panel.
+function setReference() {
+  values = {}; strength = { ...SPEECH_AREAS };
+  order = Object.keys(SPEECH_AREAS).sort((a, b) => SPEECH_AREAS[b] - SPEECH_AREAS[a]);
+  if (selected && !(selected in strength)) selected = null;
+  dirtyGlow = dirtySparks = true;
+}
+function applySample(s) {
+  sample = s; analysis = null; analysisError = null; lastRequest = null;
+  select(null, false);
+  if (condition === "adhd") setValues(s.data); else setReference();
+  updateSourcePill(); renderLegend(); renderPanel();
+}
+const cond = () => CONDITIONS[condition];
+const sampleName = s => s.custom ? s.label : `${cond().label(s)}, ${cond().sub(s)}`;
+function updateSourcePill() {
+  $("src").textContent = sample ? `${cond().name} · ${sampleName(sample)}` : "No patient chosen";
+}
+function renderLegend() {
+  $("legend").innerHTML = condition === "parkinsons" && sample
+    ? `Lit areas: where speech is produced and monitored<div class="row">Reference only: this data is a voice recording</div>`
+    : `Light = channel amplitude in this recording<div class="row"><span class="dot" style="width:8px;height:8px"></span>lower
+        <span class="dot" style="width:18px;height:18px"></span>higher</div>`;
+}
+const brightness = c => c in strength ? 0.12 + 0.88 * strength[c] : 0;
+
+// Surface glow: each region lights the cortex around its site, brighter when stronger.
+function updateGlow() {
+  const n = brain.count, k = codes.length, out = brain.glow;
+  const w = codes.map(c => { const b = brightness(c); return b ** 1.4 * (c === selected ? 1.7 : c === hovered ? 1.3 : 1); });
+  for (let v = 0; v < n; v++) {
+    let s = 0;
+    for (let j = 0, o = v * k; j < k; j++) s += gauss[o + j] * w[j];
+    s = Math.min(s, 1.5);
+    const white = Math.min(1, s * 0.75);
+    out[v * 4] = (0.20 + 0.80 * white) * s; out[v * 4 + 1] = (0.62 + 0.38 * white) * s; out[v * 4 + 2] = s;
+  }
+  gl.bindBuffer(gl.ARRAY_BUFFER, brain.mesh.glowBuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, out);
+  dirtyGlow = false;
+}
+// Point lights (regions and network nodes) and the lines between them.
+function updateSparks() {
+  const pts = [], rp = codes.map(c => regionPos(c));
+  codes.forEach((c, i) => {
+    const has = c in strength, b = brightness(c), sel = c === selected, hov = c === hovered;
+    const size = has ? 0.16 + 0.42 * b : 0.07, bright = has ? 0.35 + 0.75 * b : 0.22;
+    pts.push(...rp[i], size * (sel ? 1.45 : hov ? 1.2 : 1), bright * (sel ? 1.5 : 1));
+  });
+  for (const p of plexus) pts.push(...p, 0.05, 0.42);
+  upload(sparks, new Float32Array(pts)); sparks.count = pts.length / 5;
+
+  const seg = [], pos = (kind, i) => kind === "r" ? rp[i] : plexus[i];
+  for (const [kind, a, b] of links.pairs) {
+    let alpha, pa, pb;
+    if (kind === "pp") { alpha = 0.26; pa = pos("p", a); pb = pos("p", b); }
+    else if (kind === "rp") { alpha = 0.10 + 0.40 * brightness(codes[a]); pa = pos("r", a); pb = pos("p", b); }
+    else {
+      const ca = codes[a], cb = codes[b];
+      alpha = 0.12 + 0.70 * Math.min(brightness(ca), brightness(cb));
+      if (ca === selected || cb === selected) alpha = Math.max(alpha, 0.75);
+      pa = pos("r", a); pb = pos("r", b);
+    }
+    seg.push(...pa, alpha, ...pb, alpha);
+  }
+  upload(links, new Float32Array(seg)); links.count = seg.length / 4;
+  dirtySparks = false;
+}
+
+// =============================================================== navigation
+function glDir(code) { const p = montage[code].pos; return toGL(p[0], p[1], p[2]); }
+function facing(code) {   // rotation that turns this region toward the viewer, seen a little from above
+  const g = glDir(code), yaw = Math.atan2(g[0], g[2]), pitch = Math.atan2(g[1], Math.hypot(g[0], g[2]));
+  return Q.norm(Q.mul(Q.axis([1, 0, 0], pitch - 0.25), Q.axis([0, 1, 0], -yaw)));
+}
+function animateTo(q, d) { anim = { from: rot.slice(), to: q, t0: performance.now(), dur: 800 }; vel = [0, 0]; if (d && !handZoomActive()) distTarget = d; }
+function rotateBy(yaw, pitch) {
+  rot = Q.norm(Q.mul(Q.axis([1, 0, 0], pitch), Q.mul(Q.axis([0, 1, 0], yaw), rot)));
+  anim = null; lastInput = performance.now();
+}
+function select(code, announce = true) {
+  if (code === selected) return;
+  selected = code; lastInput = performance.now(); dirtyGlow = dirtySparks = true;
+  if (code) {
+    animateTo(facing(code), Math.min(distTarget, 3.2));
+    if (step === 1 && code in strength) setStep(2);
+    if (announce) toast(`${montage[code].name} (${code})${code in values ? ` · strength ${Math.round(strength[code] * 100)}%`
+      : code in strength ? " · speech area (reference)" : ""}`);
+  }
+  renderPanel();
+}
+function stepRegion(dir) {
+  if (!order.length) { toast("Choose a patient first"); return; }
+  const i = order.indexOf(selected);
+  select(order[i < 0 ? (dir > 0 ? 0 : order.length - 1) : (i + dir + order.length) % order.length]);
+}
+function zoom(f) { if (handZoomActive()) return; distTarget = clamp(distTarget * f, DMIN, DMAX); lastInput = performance.now(); }
+function setStep(s) {
+  step = clamp(s, 1, 3);
+  document.querySelectorAll(".steps button").forEach(b => {
+    const n = +b.dataset.step; b.classList.toggle("on", n === step); b.classList.toggle("done", n < step);
+  });
+  renderPanel();
+}
+function runAction(a) {
+  lastInput = performance.now();
+  if (a === "overview") { select(null, false); animateTo(HOME, 3.9); toast("Overview"); }
+  else if (a === "strongest") { if (order.length) select(order[0]); else toast("Choose a patient first"); }
+  else if (a === "labels") { labelsOn = !labelsOn; toast(labelsOn ? "Labels on" : "Labels off"); }
+  else if (a === "lines") { linesOn = !linesOn; toast(linesOn ? "Network lines on" : "Network lines off"); }
+  else if (a === "handzoom") { handZoom = !handZoom; zoomCtl.base = null; toast(handZoom ? "Hand-distance zoom on" : "Hand-distance zoom off"); }
+  else if (a === "analyze") { if (step === 3) runAnalysis(); else setStep(3); }
+}
+function pickAt(x, y) {   // nearest region light; front ones win over ones seen through the brain
+  let best = null, bestD = 44;
+  for (const [code, s] of Object.entries(screen)) {
+    const d = Math.hypot(s.x - x, s.y - y) + (s.front ? 0 : 18);
+    if (d < bestD) { best = code; bestD = d; }
+  }
+  return best;
+}
+
+// ======================================================= hand-distance zoom
+// Palm size in the camera image grows as the hand comes closer. Zoom follows the
+// change from where the hand was when it appeared, so there is no jump; at either
+// limit the reference slides so reversing direction responds at once.
+const handZoomActive = () => handZoom && cameraOn && handActive();
+function onHandDepth(size) {
+  if (!handZoom || !(size > 0)) return;
+  zoomCtl.ema = zoomCtl.ema == null ? size : zoomCtl.ema + (size - zoomCtl.ema) * 0.18;
+  if (zoomCtl.base == null) { zoomCtl.base = zoomCtl.ema; zoomCtl.baseDist = distTarget; }
+  const k = 1.6;
+  let d = zoomCtl.baseDist / Math.pow(zoomCtl.ema / zoomCtl.base, k);
+  if (d < DMIN || d > DMAX) {
+    d = clamp(d, DMIN, DMAX);
+    zoomCtl.base = zoomCtl.ema / Math.pow(zoomCtl.baseDist / d, 1 / k);
+  }
+  distTarget = d;
+}
+
+// ======================================================================= menu
+function openMenu(x, y, fromKeyboard) {
+  menuOpen = true; menuHover = -1;
+  menuAt = [clamp(x, 160, innerWidth - 160), clamp(y, 160, innerHeight - 190)];
+  const m = $("menu"); m.style.display = "block"; m.style.transform = `translate(${menuAt[0]}px, ${menuAt[1]}px)`;
+  if (fromKeyboard) send({ cmd: "open_menu" });
+}
+function closeMenu(tellEngine) { menuOpen = false; $("menu").style.display = "none"; if (tellEngine) send({ cmd: "close_menu" }); }
+function menuItemAt(x, y) {
+  const dx = x - menuAt[0], dy = y - menuAt[1];
+  if (Math.hypot(dx, dy) < 40) return -1;
+  const ang = (Math.atan2(dy, dx) * 180 / Math.PI + 90 + 360) % 360;
+  return Math.round(ang / (360 / MENU_ITEMS.length)) % MENU_ITEMS.length;
+}
+function buildMenu() {
+  const m = $("menu");
+  MENU_ITEMS.forEach(([label], i) => {
+    const a = (-90 + i * 360 / MENU_ITEMS.length) * Math.PI / 180, el = document.createElement("div");
+    el.className = "item"; el.textContent = label;
+    el.style.left = `${150 + Math.cos(a) * 104}px`; el.style.top = `${150 + Math.sin(a) * 104}px`;
+    m.appendChild(el);
+  });
+}
+
+// ====================================================================== input
+const handActive = () => hand.present && performance.now() - hand.seen < 600;
+const handPx = (p = [hand.x, hand.y]) => [p[0] * innerWidth, p[1] * innerHeight];
+const pointer = () => handActive() ? handPx() : mouse;
+
+function onHandEvent(kind, data) {
+  const now = performance.now();
+  if (kind === "grab_start") {
+    if (menuOpen) {
+      const i = menuItemAt(...handPx(data.pos));
+      closeMenu(true);
+      if (i >= 0) runAction(MENU_ITEMS[i][1]);
+      drag = null; return;
+    }
+    drag = { x: data.pos[0], y: data.pos[1], t0: now, moved: 0, v: [0, 0] };
+  } else if (kind === "grab_move" && drag) {
+    const dx = data.pos[0] - drag.x, dy = data.pos[1] - drag.y;
+    drag.x = data.pos[0]; drag.y = data.pos[1]; drag.moved += Math.hypot(dx, dy);
+    drag.v = [dx * ROT_GAIN, dy * ROT_GAIN];
+    rotateBy(drag.v[0], drag.v[1]);
+  } else if (kind === "grab_end" && drag) {
+    if (!data.cancelled && drag.moved < 0.035 && now - drag.t0 < 650) select(pickAt(...handPx(data.pos)));
+    else vel = drag.v;
+    drag = null;
+  } else if (kind === "swipe") {
+    ({ left: () => stepRegion(1), right: () => stepRegion(-1), up: () => setStep(step + 1), down: () => setStep(step - 1) })[data.direction]?.();
+  } else if (kind === "menu_open") openMenu(...handPx(data.pos), false);
+  else if (kind === "menu_close") closeMenu(false);
+  else if (kind === "custom") toast(`Gesture: ${data.label}`);
+  else if (kind === "hand_lost") { drag = null; zoomCtl.base = null; zoomCtl.ema = null; }
+  else if (kind === "hand_found") { zoomCtl.base = null; zoomCtl.ema = null; }
+}
+function onHandState(s) {
+  hand.present = s.present; hand.grabbing = s.grabbing; hand.progress = s.menu_progress; hand.seen = performance.now();
+  if (s.cursor) [hand.x, hand.y] = s.cursor;
+  if (s.present) lastInput = performance.now();
+}
+
+canvas.addEventListener("pointerdown", e => { canvas.setPointerCapture(e.pointerId); mdrag = { x: e.clientX, y: e.clientY, moved: 0, v: [0, 0] }; });
+canvas.addEventListener("pointermove", e => {
+  mouse = [e.clientX, e.clientY];
+  if (mdrag && e.buttons === 0) mdrag = null;   // the button came up somewhere we didn't hear about
+  if (!mdrag) return;
+  const dx = e.clientX - mdrag.x, dy = e.clientY - mdrag.y;
+  mdrag.x = e.clientX; mdrag.y = e.clientY; mdrag.moved += Math.hypot(dx, dy);
+  mdrag.v = [dx / innerWidth * ROT_GAIN, dy / innerHeight * ROT_GAIN];
+  rotateBy(...mdrag.v);
+});
+canvas.addEventListener("pointerup", e => {
+  if (mdrag && mdrag.moved < 5) select(pickAt(e.clientX, e.clientY)); else if (mdrag) vel = mdrag.v;
+  mdrag = null;
+});
+canvas.addEventListener("pointerleave", () => { if (!mdrag) mouse = null; });
+canvas.addEventListener("pointercancel", () => { mdrag = null; });
+canvas.addEventListener("lostpointercapture", () => { mdrag = null; });
+canvas.addEventListener("wheel", e => { e.preventDefault(); zoom(Math.exp(e.deltaY * 0.0015)); }, { passive: false });
+addEventListener("keydown", e => {
+  if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName) || e.target.closest?.(".picker")) return;
+  const k = e.key.toLowerCase(), acts = {
+    arrowright: () => stepRegion(1), arrowleft: () => stepRegion(-1), arrowup: () => zoom(0.8), arrowdown: () => zoom(1.25),
+    l: () => runAction("labels"), n: () => runAction("lines"), z: () => runAction("handzoom"), r: () => runAction("overview"),
+    1: () => setStep(1), 2: () => setStep(2), 3: () => setStep(3),
+    escape: () => menuOpen ? closeMenu(true) : select(null, false),
+    m: () => menuOpen ? closeMenu(true) : openMenu(innerWidth / 2, innerHeight / 2, true),
+  };
+  if (acts[k]) { e.preventDefault(); acts[k](); }
+});
+document.querySelectorAll(".steps button").forEach(b => b.onclick = () => setStep(+b.dataset.step));
+
+document.addEventListener("pointerdown", e => { if (pickerOpen && !e.target.closest(".picker")) setPicker(false); });
+
+// ===================================================================== panel
+const esc = s => String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+const fmt = v => Number.isFinite(v) ? (Math.abs(v) >= 100 ? v.toFixed(0) : +v.toFixed(2)) : "-";
+const num = v => !Number.isFinite(v) ? "-" : v === 0 ? "0" : Math.abs(v) >= 1000 ? v.toFixed(0)
+  : Math.abs(v) >= 1 ? +v.toFixed(2) : +v.toPrecision(3);
+const pct = p => `${Math.round(p * 100)}%`;
+const pts = e => `${e > 0 ? "+" : ""}${(e * 100).toFixed(1)} pts`;
+const sd = z => `${Math.abs(z).toFixed(1)} SD ${z > 0 ? "above" : "below"}`;
+const groups = () => [["Midline", codes.filter(c => montage[c].side === "midline")],
+                      ["Left hemisphere", codes.filter(c => montage[c].side === "left")],
+                      ["Right hemisphere", codes.filter(c => montage[c].side === "right")]];
+const backTo = (s, label) => `<button data-act="${s}">${label}</button>`;
+
+function renderPanel() {
+  const el = $("panel");
+  if (!montage) { el.innerHTML = `<div class="card"><h2>Waiting for the server</h2><p class="sub">Start everything with <code>python run.py</code> in the finalized folder.</p></div>`; return; }
+  const keep = el.dataset.step === String(step) ? el.scrollTop : 0;   // re-renders on the same step keep their scroll
+  el.innerHTML = step === 1 ? inputPanel() : step === 2 ? explorePanel() : analyzePanel();
+  el.dataset.step = step; el.scrollTop = keep;
+  wirePanel();
+  renderEmpty();
+}
+
+// --------------------------------------------------------- step 1: patient
+function inputPanel() {
+  const c = cond(), list = catalog[condition], err = catalogError[condition];
+  const seg = `<div class="seg" role="tablist" aria-label="Condition">${Object.entries(CONDITIONS).map(([k, v]) =>
+    `<button role="tab" aria-selected="${k === condition}" class="${k === condition ? "on" : ""}" data-cond="${k}">${v.name}<span>${v.data}</span></button>`).join("")}</div>`;
+  let body;
+  if (err) body = `<div class="result"><b>Can't reach the ${c.name} model server.</b><div class="sub">${esc(err)}. Start everything with <code>python run.py</code> in the finalized folder.</div>
+      <div class="row"><button data-act="retry">Try again</button></div></div>`;
+  else if (!list) body = `<p class="sub">Loading held-out patients...</p>`;
+  else body = `<p class="sub" style="margin:0">${c.count(list)} that the model never saw in training. Pick one to fill in the values.</p>${pickerHtml()}`;
+  return `<div class="card"><h2>1 · Choose a patient</h2>${seg}${body}</div>
+    ${sample ? valuesCard() : ""}
+    <div class="row"><span class="grow"></span><button class="primary" data-act="toExplore" ${sample ? "" : "disabled"}>Explore on the brain</button></div>`;
+}
+function valuesCard() {
+  if (condition === "adhd") {
+    return `<div class="card"><h2>EEG values</h2><p class="note" style="margin:0 0 6px">Amplitude of each channel over 2 seconds (µV). These light the brain.</p>
+      ${groups().map(([g, list]) => `<h3>${g}</h3><div class="vals">${list.map(k =>
+        `<div class="val" title="${esc(montage[k].name)}"><b>${k}</b><span>${fmt(values[k])}</span></div>`).join("")}</div>`).join("")}</div>`;
+  }
+  const labels = (catalog.parkinsons && catalog.parkinsons.labels) || {};
+  return `<div class="card"><h2>Voice measures</h2><p class="note" style="margin:0 0 6px">27 headline features of this recording. The model reads all 753.</p>
+    <div class="vals wide">${Object.entries(sample.data).map(([k, v]) =>
+      `<div class="val"><b title="${esc(k)}">${esc(labels[k] || k)}</b><span>${num(v)}</span></div>`).join("")}</div></div>`;
+}
+
+// Dropdown: three options visible at a time, scroll for the rest, filter by ID.
+function pickerHtml() {
+  const c = cond();
+  return `<div class="picker">
+    <button class="picker-btn" id="pickerBtn" aria-haspopup="listbox" aria-expanded="${pickerOpen}" aria-controls="pickerList">
+      ${sample && !sample.custom ? `<span><b>${esc(c.label(sample))}</b><small>${esc(c.sub(sample))}</small></span>`
+        : `<span class="sub">Choose a held-out ${c.person}</span>`}
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+    <div class="picker-pop" ${pickerOpen ? "" : "hidden"}>
+      <input id="pickerFilter" type="search" autocomplete="off" aria-label="Filter by ID" value="${esc(pickerFilter)}"
+             placeholder="Filter by ID, e.g. ${condition === "adhd" ? "v286" : "053"}">
+      <ul role="listbox" id="pickerList" tabindex="-1" aria-label="Held-out patients">${optionsHtml()}</ul>
+      <div class="picker-count" id="pickerCount">${countText()}</div>
+    </div></div>`;
+}
+const filtered = () => {
+  const f = pickerFilter.trim().toLowerCase(), all = catalog[condition].samples;
+  return f ? all.filter(s => s.id.toLowerCase().includes(f)) : all;
+};
+const countText = () => `${filtered().length} of ${catalog[condition].samples.length}`;
+function optionsHtml() {
+  const c = cond();
+  return filtered().map(s => `<li role="option" id="opt-${s.id}" data-id="${s.id}" aria-selected="${!!sample && s.id === sample.id}">
+    <b>${esc(c.label(s))}</b><small>${esc(c.sub(s))}</small></li>`).join("") || `<li class="none">No match</li>`;
+}
+let activeOpt = null;
+function setActive(li) {
+  activeOpt?.classList.remove("active");
+  activeOpt = li && li.dataset.id ? li : null;
+  if (activeOpt) { activeOpt.classList.add("active"); $("pickerList").setAttribute("aria-activedescendant", activeOpt.id); }
+}
+function setPicker(open) {
+  pickerOpen = open;
+  const pop = document.querySelector(".picker-pop");
+  if (!pop) return;
+  pop.hidden = !open; $("pickerBtn").setAttribute("aria-expanded", open);
+  if (open) {
+    const list = $("pickerList"), sel = list.querySelector('[aria-selected="true"]') || list.querySelector("[data-id]");
+    setActive(sel); sel?.scrollIntoView({ block: "nearest" });
+    $("pickerFilter").focus();
+  }
+}
+function pickerKeys(e) {
+  const opts = [...$("pickerList").querySelectorAll("[data-id]")];
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    const next = opts[clamp(opts.indexOf(activeOpt) + (e.key === "ArrowDown" ? 1 : -1), 0, opts.length - 1)];
+    if (next) { setActive(next); next.scrollIntoView({ block: "nearest" }); }
+  } else if (e.key === "Enter" && activeOpt) { e.preventDefault(); choose(activeOpt.dataset.id); }
+  else if (e.key === "Escape") { e.preventDefault(); setPicker(false); $("pickerBtn").focus(); }
+}
+function wireOptions() {
+  $("pickerList").querySelectorAll("[data-id]").forEach(li => {
+    li.onclick = () => choose(li.dataset.id);
+    li.onmousemove = () => { if (li !== activeOpt) setActive(li); };
+  });
+}
+function choose(id) {
+  const s = catalog[condition].samples.find(x => x.id === id);
+  if (!s) return;
+  pickerOpen = false;
+  applySample(s);
+  toast(`${cond().label(s)} · ${cond().sub(s)}`);
+}
+function switchCondition(k) {
+  if (k === condition) return;
+  condition = k; sample = null; analysis = null; analysisError = null; pickerOpen = false; pickerFilter = "";
+  select(null, false);
+  values = {}; strength = {}; order = []; dirtyGlow = dirtySparks = true;
+  updateSourcePill(); renderLegend(); renderPanel();
+  if (!catalog[k]) loadCatalog(k);
+}
+async function loadCatalog(k) {
+  catalogError[k] = null;
+  try {
+    const r = await fetch(`${apis[k]}/heldout-samples`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    catalog[k] = await r.json();
+  } catch (e) {
+    catalogError[k] = e instanceof TypeError ? `No answer from ${apis[k] || "its address"}` : String(e.message || e);
+  }
+  if (k === condition && step === 1) renderPanel();
+}
+
+// --------------------------------------------------------- step 2: explore
+const handHelp = () => `<div class="card"><h2>Hand controls</h2><dl class="help">
+    <dt>Fist + move</dt><dd>Rotate the brain</dd>
+    <dt>Palm closer / further</dt><dd>Zoom in / out</dd>
+    <dt>Quick fist</dt><dd>Select the region under the cursor</dd>
+    <dt>Swipe left / right</dt><dd>Next / previous lit region</dd>
+    <dt>Swipe up / down</dt><dd>Next / previous step</dd>
+    <dt>Hold open palm</dt><dd>Menu: point, then make a fist</dd></dl>
+    <p class="note">Mouse: drag, click, scroll. Keys: arrows, 1-3 steps, M menu, L labels, N network, Z hand zoom, R reset.</p></div>`;
+const needPatient = title => `<div class="card"><h2>${title}</h2><p class="sub">Choose a held-out patient in step 1 first.</p>
+    <div class="row">${backTo("toInput", "Choose a patient")}</div></div>`;
+
+function explorePanel() {
+  if (!sample) return needPatient("2 · Explore") + handHelp();
+  const pd = condition === "parkinsons";
+  let focus;
+  if (!selected) {
+    focus = pd ? `<h2>2 · Explore</h2><div class="big">Speech areas</div>
+        <p class="sub">This Parkinson's data is a voice recording, not EEG, so it has no electrode positions. The lit areas are the parts of the brain that plan, produce and monitor speech, shown for reference. The recording's own measures are listed below.</p>`
+      : `<h2>2 · Explore</h2><div class="big">${order.length} regions lit</div>
+        <p class="sub">Brighter, larger lights mark channels with higher amplitude in this recording. Swipe left to visit them from the strongest down, or make a quick fist on a light.</p>`;
+  } else {
+    const m = montage[selected], has = selected in values;
+    focus = `<h2>Region</h2><div class="big">${esc(m.name)}</div><div class="sub">${selected} · ${m.side}</div>
+      <dl class="kv"><dt>Over</dt><dd>${esc(m.region)}</dd>
+        ${pd ? `<dt>In this data</dt><dd>Reference area, not measured</dd>`
+             : `<dt>Amplitude</dt><dd>${has ? fmt(values[selected]) + " µV" : "-"}</dd>
+                <dt>Rank</dt><dd>${has ? `${order.indexOf(selected) + 1} of ${order.length}` : "-"}</dd>`}</dl>
+      ${has ? `<div class="sub" style="margin-top:8px">Strength ${Math.round(strength[selected] * 100)}%</div><div class="meter"><i style="width:${Math.max(3, strength[selected] * 100)}%"></i></div>` : ""}
+      <p class="note">${esc(m.about)}${pd ? "" : " Scalp EEG blends activity from a few centimetres around the site."}</p>
+      <div class="row"><button data-act="overview">Overview</button></div>`;
+  }
+  const list = pd ? valuesCard()
+    : `<div class="card"><h2>Regions by strength</h2><div class="rank">${order.map(k => `<button data-sel="${k}" class="${k === selected ? "sel" : ""}">
+        <b>${k}</b><span class="meter"><i style="width:${Math.max(3, strength[k] * 100)}%"></i></span><span>${fmt(values[k])}</span></button>`).join("")}</div></div>`;
+  return `<div class="card">${focus}</div>${list}${handHelp()}
+    <div class="row">${backTo("toInput", "Change patient")}<span class="grow"></span><button class="primary" data-act="toAnalyze">Continue to analysis</button></div>`;
+}
+
+// --------------------------------------------------------- step 3: analyze
+function analyzePanel() {
+  if (!sample) return needPatient("3 · Analyze");
+  const c = cond();
+  const head = `<div class="card"><h2>3 · Analyze</h2>
+      <dl class="kv" style="margin-top:0"><dt>Patient</dt><dd>${esc(sampleName(sample))}</dd>
+        <dt>Model</dt><dd>${condition === "adhd" ? "ADHD EEG model" : "Parkinson's voice model"}</dd></dl>
+      <div class="row"><button class="primary" data-act="predict" ${analyzing ? "disabled" : ""}>${analyzing ? "Analysing..."
+        : analysis ? "Run again" : `Run ${c.name} prediction`}</button></div>
+      ${analysisError ? `<div class="result"><b>The model could not answer.</b><div class="sub">${esc(analysisError)}</div></div>` : ""}</div>`;
+  const tail = `<div class="row">${backTo("toExplore", "Back to the brain")}</div>`;
+  if (!analysis) return head + `<div class="card"><p class="sub" style="margin:0">The model returns its prediction with an analysis: what drove it, how this recording compares with the people it learned from, and how reliable the model is.</p></div>` + tail;
+  return head + resultCards(analysis) + tail;
+}
+function resultCards(a) {
+  const c = cond(), positive = a.prediction === c.positive, truth = a.person ? a.person.true_label : sample.true_label;
+  const margin = { low: "Close to the 50% line: the model is unsure about this one.",
+                   moderate: "A moderate lean one way.", high: "A clear lean, but check how reliable the model is below." }[a.margin];
+  const person = a.person ? `<p class="note">${condition === "adhd"
+      ? `Across all ${a.person.windows} windows from this child, the model averages ${pct(a.person.mean_probability)} and calls ${pct(a.person.share_positive)} of them ADHD.`
+      : `Across this person's ${a.person.recordings} recordings, the model averages ${pct(a.person.mean_probability)} and calls ${pct(a.person.share_positive)} of them Parkinson's.`}</p>` : "";
+  const hero = `<div class="card ${positive ? "pos" : ""}"><h2>Model result</h2>
+      <div class="big">${positive ? `${c.name} pattern` : "Control pattern"}</div>
+      <div class="prob"><div class="prob-bar"><i style="width:${(a.probability * 100).toFixed(1)}%"></i><span class="thr"></span></div>
+        <div class="prob-ends"><span>Control</span><b>${pct(a.probability)} ${c.name}</b><span>${c.name}</span></div></div>
+      <p class="sub" style="margin:4px 0 0">${margin}</p>
+      ${truth ? `<div class="truth ${truth === a.prediction ? "ok" : "miss"}"><b>${truth === a.prediction ? "Matches" : "Does not match"} the dataset label</b>
+        <span>This ${c.person} is labelled <b>${truth === c.positive ? c.name : "Control"}</b> in the dataset.</span></div>` : ""}
+      ${person}</div>`;
+  return hero + (condition === "adhd" ? adhdCards(a) : parkinsonsCards(a)) + trustCard(a) + meaningCard();
+}
+function adhdCards(a) {
+  const by = [...a.channels].sort((x, y) => y.effect - x.effect);
+  const row = x => `<button class="drv" data-sel="${x.code}"><b>${x.code}</b><span>${esc(montage[x.code].name)}<small>${fmt(x.value)} µV, typical ${fmt(x.typical)}</small></span>
+      <em class="${x.effect > 0 ? "up" : "down"}">${pts(x.effect)}</em></button>`;
+  const up = by.filter(x => x.effect > 0.005).slice(0, 5), down = by.filter(x => x.effect < -0.005).reverse().slice(0, 5);
+  const unusual = [...a.channels].filter(x => Math.abs(x.z) >= 1).sort((x, y) => Math.abs(y.z) - Math.abs(x.z)).slice(0, 6);
+  return `<div class="card"><h2>What drove this result</h2>
+      <p class="note" style="margin:0 0 6px">How far the result moves when one channel is swapped for the training group's typical value. Select a channel to see it on the brain.</p>
+      <h3>Toward ADHD</h3>${up.map(row).join("") || `<p class="sub">No channel pushed noticeably this way.</p>`}
+      <h3 style="margin-top:10px">Toward Control</h3>${down.map(row).join("") || `<p class="sub">No channel pushed noticeably this way.</p>`}</div>
+    <div class="card"><h2>Compared with the training group</h2>
+      ${unusual.length ? unusual.map(x => `<button class="drv" data-sel="${x.code}"><b>${x.code}</b><span>${sd(x.z)} the training average</span>
+        <em>${fmt(x.value)} µV</em></button>`).join("") : `<p class="sub">Every channel is within 1 SD of the training group's average.</p>`}</div>`;
+}
+function parkinsonsCards(a) {
+  const row = d => `<div class="drv static"><span>${esc(d.label)}<small>${esc(d.family)} · ${num(d.value)}, typical ${num(d.typical)}</small></span>
+      <em class="${d.effect > 0 ? "up" : "down"}">${pts(d.effect)}</em></div>`;
+  const unusual = a.key_features.filter(f => Math.abs(f.z) >= 1.5).sort((x, y) => Math.abs(y.z) - Math.abs(x.z)).slice(0, 6);
+  const so = a.second_opinion;
+  return `<div class="card"><h2>What drove this result</h2>
+      <p class="note" style="margin:0 0 6px">The voice features that moved the result most when swapped for the training group's typical value. Positive means toward Parkinson's.</p>
+      ${a.drivers.map(row).join("") || `<p class="sub">No single feature moved the result noticeably.</p>`}
+      <h3 style="margin-top:10px">By feature family</h3>
+      ${a.families.filter(f => Math.abs(f.effect) > 0.001).slice(0, 5).map(f => `<div class="drv static"><span>${esc(f.family)}</span><em class="${f.effect > 0 ? "up" : "down"}">${pts(f.effect)}</em></div>`).join("")}</div>
+    <div class="card"><h2>Compared with the training group</h2>
+      ${unusual.length ? unusual.map(f => `<div class="drv static"><span>${esc(f.label)}<small>${num(f.value)}</small></span><em>${sd(f.z)}</em></div>`).join("")
+        : `<p class="sub">All 27 headline measures are within 1.5 SD of the training group's average.</p>`}</div>
+    <div class="card"><h2>Second opinion</h2>
+      <p class="sub" style="margin:0">${esc(so.name)}: <b>${so.prediction === "Parkinsons" ? "Parkinson's" : "Control"} pattern</b> (${pct(so.probability)}). It is the weaker model (test AUC ${so.test_auc.toFixed(2)}), so the main result above takes precedence.</p></div>`;
+}
+function trustCard(a) {
+  const m = a.model, t = m.test, cv = m.cv, adhd = condition === "adhd";
+  const others = m.n_people.train + m.n_people.val;
+  return `<div class="card"><h2>How reliable is this model?</h2>
+    <dl class="kv" style="margin-top:0">
+      <dt>${adhd ? "Unseen children" : "Unseen people"}</dt><dd>${pct(t.accuracy)} right on ${t.n} ${adhd ? "2-second windows" : "recordings"} (AUC ${t.auc.toFixed(2)})</dd>
+      ${adhd ? `<dt>Per child</dt><dd>${pct(t.person_level_accuracy)} right when a child's windows are averaged</dd>` : ""}
+      <dt>Cross-validation</dt><dd>${pct(cv.accuracy.mean)} ± ${Math.round(cv.accuracy.std * 100)} on ${others} other ${adhd ? "children" : "people"}</dd>
+      <dt>Catches ${esc(cond().name)}</dt><dd>${pct(t.sensitivity)} of cases</dd>
+      <dt>Clears controls</dt><dd>${pct(t.specificity)} of healthy ${adhd ? "children" : "people"}</dd></dl>
+    <p class="note">${adhd && t.auc < 0.6 ? "On the 19 children it never saw, this model did about as well as chance. Treat its answer as a demonstration, not evidence."
+      : !adhd ? `Most recordings are from people with Parkinson's, so answering "Parkinson's" every time would already score ${pct(m.majority_baseline)}. The model catches most cases but wrongly flags about half of healthy people.` : ""}
+      ${esc(m.name)}, trained ${esc(m.trained_at.slice(0, 10))}, split ${esc(m.split)}.</p></div>`;
+}
+const meaningCard = () => `<div class="card"><h2>What this means</h2><ul class="info">${MEANING[condition].map(s => `<li>${esc(s)}</li>`).join("")}</ul>
+    ${lastRequest ? `<details><summary>Request sent to the model</summary><pre>${esc(JSON.stringify(lastRequest, null, 1))}</pre></details>` : ""}</div>`;
+
+async function runAnalysis() {
+  if (!sample) { toast("Choose a patient first"); setStep(1); return; }
+  if (analyzing) return;
+  analyzing = true; analysisError = null;
+  if (step !== 3) setStep(3); else renderPanel();
+  lastRequest = condition === "adhd"
+    ? { data: Object.fromEntries(eegOrder.map(k => [k, values[k]])), ...(sample.custom ? {} : { sample_id: sample.id }) }
+    : { sample_id: sample.id };
+  try {
+    const r = await fetch(`${apis[condition]}/analyze`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(lastRequest) });
+    const j = await r.json();
+    if (!r.ok || j.error) throw new Error(j.error || `HTTP ${r.status}`);
+    analysis = j;
+    toast(`${cond().name} model: ${j.prediction === cond().positive ? cond().name : "Control"} pattern (${pct(j.probability)})`);
+  } catch (e) {
+    analysisError = e instanceof TypeError ? `No answer from ${apis[condition]}. Is the model server running?` : String(e.message || e);
+  }
+  analyzing = false; renderPanel();
+}
+
+function wirePanel() {
+  const el = $("panel");
+  el.querySelectorAll("[data-act]").forEach(b => b.onclick = () => panelAction(b.dataset.act));
+  el.querySelectorAll("[data-sel]").forEach(b => b.onclick = () => select(b.dataset.sel));
+  el.querySelectorAll("[data-cond]").forEach(b => b.onclick = () => switchCondition(b.dataset.cond));
+  if ($("pickerBtn")) {
+    $("pickerBtn").onclick = () => setPicker(!pickerOpen);
+    $("pickerFilter").oninput = e => {
+      pickerFilter = e.target.value;
+      $("pickerList").innerHTML = optionsHtml(); $("pickerCount").textContent = countText();
+      wireOptions(); setActive($("pickerList").querySelector("[data-id]"));
+    };
+    $("pickerFilter").onkeydown = pickerKeys; $("pickerList").onkeydown = pickerKeys;
+    wireOptions();
+    if (pickerOpen) setPicker(true);
+  }
+}
+function panelAction(a) {
+  if (a === "toExplore") setStep(2);
+  else if (a === "toInput") setStep(1);
+  else if (a === "toAnalyze") setStep(3);
+  else if (a === "overview") runAction("overview");
+  else if (a === "predict") runAnalysis();
+  else if (a === "retry") { catalog[condition] = null; renderPanel(); loadCatalog(condition); }
+}
+function renderEmpty() {
+  const el = $("empty");
+  el.style.display = sample ? "none" : "block";
+  el.innerHTML = montage ? "Choose a held-out patient in step 1. The brain lights up with their recording." : "";
+}
+
+// ==================================================================== socket
+let ws = null, wsOpen = false;
+function send(o) { if (!wsOpen) return false; ws.send(JSON.stringify(o)); return true; }
+function connect() {
+  ws = new WebSocket(`ws://${location.host}/`);
+  ws.onopen = () => { wsOpen = true; send({ cmd: "hello" }); };
+  ws.onclose = () => { wsOpen = false; setStatus(); setTimeout(connect, 1500); };
+  ws.onmessage = e => onMessage(JSON.parse(e.data));
+}
+function onMessage(m) {
+  if (m.type === "init") {
+    const first = !montage;
+    montage = m.montage; cameraOn = m.camera; eegOrder = m.eegenius_order; apis = m.apis || {};
+    if (first) { prepareRegions(); buildLabels(); renderLegend(); setStep(1); Object.keys(CONDITIONS).forEach(loadCatalog); }
+  } else if (m.type === "eeg" && montage) {   // a recording pushed by another program: analysed like any ADHD input
+    if (condition !== "adhd") switchCondition("adhd");
+    applySample({ custom: true, label: m.source === "external" ? `Sent by ${m.name}` : m.name,
+                  data: Object.fromEntries(m.channels.map((c, i) => [c, m.frames[0][i]])) });
+    toast(`Loaded ${m.name}`);
+  } else if (m.type === "event") onHandEvent(m.kind, m.data);
+  else if (m.type === "state") onHandState(m);
+  else if (m.type === "hand_depth") onHandDepth(m.size);
+  else if (m.type === "error") toast(m.message);
+}
+let statusKey = "";
+function setStatus() {
+  const [cls, text] = !wsOpen ? ["pill", "Server offline"] : !cameraOn ? ["pill idle", "Camera off: mouse and keys"]
+    : handActive() ? ["pill on", "Hand tracking"] : ["pill idle", "Show your hand"];
+  if (cls + text === statusKey) return;
+  statusKey = cls + text;
+  const pill = $("handPill"); pill.className = cls; pill.querySelector("span").textContent = text;
+}
+
+// ================================================================ labels, toasts
+const labelEls = {};
+function buildLabels() {
+  const root = $("labels"); root.innerHTML = "";
+  for (const c of codes) { const el = document.createElement("div"); el.className = "lbl"; root.appendChild(el); labelEls[c] = el; }
+}
+function toast(msg) {
+  const el = document.createElement("div"); el.className = "toast"; el.textContent = msg;
+  $("toasts").appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+  while ($("toasts").children.length > 3) $("toasts").firstChild.remove();
+}
+
+// ===================================================================== frame
+let prev = performance.now(), lastUi = 0;
+function frame(now) {
+  const dt = Math.min(0.1, (now - prev) / 1000); prev = now;
+  if (anim) {
+    const t = clamp((now - anim.t0) / anim.dur, 0, 1), e = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+    rot = Q.norm(Q.slerp(anim.from, anim.to, e)); if (t >= 1) anim = null;
+  } else if (!drag && !mdrag && Math.hypot(...vel) > 1e-4) {
+    rotateBy(vel[0], vel[1]); vel = vel.map(v => v * Math.pow(0.04, dt));
+  } else if (!selected && now - lastInput > 8000 && !menuOpen) {
+    rot = Q.norm(Q.mul(Q.axis([0, 1, 0], 0.14 * dt), rot));    // idle turntable
+  }
+  dist += (distTarget - dist) * Math.min(1, dt * 7);
+
+  const rect = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+  if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
+    canvas.width = Math.round(rect.width * dpr); canvas.height = Math.round(rect.height * dpr);
+  }
+  const aspect = rect.width / Math.max(1, rect.height), fov = 0.62, yOff = 0.10;
+  const proj = perspective(fov, aspect, 0.1, 50), view = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, yOff, -dist, 1], model = Q.mat(rot);
+  const p = pointer(), tf = 1 / Math.tan(fov / 2);
+
+  // project region lights for labels and picking
+  screen = {};
+  if (montage) {
+    for (const c of codes) {
+      const w = Q.rot(rot, regionPos(c)), vz = w[2] - dist;
+      screen[c] = { x: rect.left + (w[0] * tf / aspect / -vz * 0.5 + 0.5) * rect.width,
+                    y: rect.top + (0.5 - (w[1] + yOff) * tf / -vz * 0.5) * rect.height, front: Q.rot(rot, glDir(c))[2] > 0 };
+    }
+    const h = p && !menuOpen ? pickAt(p[0], p[1]) : null;
+    if (h !== hovered) { hovered = h; dirtyGlow = dirtySparks = true; }
+    if (dirtyGlow) updateGlow();
+    if (dirtySparks) updateSparks();
+  }
+
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.disable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+  const t = now / 1000, common = (prog) => {
+    gl.useProgram(prog.p);
+    gl.uniformMatrix4fv(prog.u.uProj, false, proj); gl.uniformMatrix4fv(prog.u.uView, false, view);
+    gl.uniformMatrix4fv(prog.u.uModel, false, model);
+  };
+  common(P.holo); gl.uniform3fv(P.holo.u.uEye, [0, -yOff, dist]);
+  const holo = (m, body, rim, glow, wire) => {
+    gl.uniform1f(P.holo.u.uBody, body); gl.uniform1f(P.holo.u.uRim, rim); gl.uniform1f(P.holo.u.uGlow, glow);
+    const part = wire ? m.wire : m.tri;
+    gl.bindVertexArray(part.vao); gl.drawElements(wire ? gl.LINES : gl.TRIANGLES, part.count, gl.UNSIGNED_INT, 0);
+  };
+  holo(brain.mesh, 0.12, 0.40, 0.45, false);
+  holo(brain.mesh, 0.06, 0.16, 0.20, true);
+  holo(cere, 0.08, 0.14, 0, false); holo(cere, 0.06, 0.08, 0, true);
+  holo(stem, 0.07, 0.22, 0, false);
+  if (montage) {
+    if (linesOn) { common(P.line); gl.uniform1f(P.line.u.uTime, t); gl.bindVertexArray(links.vao); gl.drawArrays(gl.LINES, 0, links.count); }
+    common(P.spark); gl.uniform1f(P.spark.u.uTime, t); gl.uniform1f(P.spark.u.uPx, canvas.height * proj[5] / 2);
+    gl.bindVertexArray(sparks.vao); gl.drawArrays(gl.POINTS, 0, sparks.count);
+  }
+  gl.bindVertexArray(null);
+
+  // labels
+  if (montage) {
+    const strong = new Set(order.slice(0, 3));
+    for (const c of codes) {
+      const s = screen[c], el = labelEls[c], sel = c === selected, hov = c === hovered, has = c in values;
+      const show = (labelsOn && (s.front || sel)) || sel || hov;
+      el.style.display = show ? "block" : "none";
+      if (!show) continue;
+      el.style.left = `${s.x - rect.left}px`; el.style.top = `${s.y - rect.top}px`;
+      el.style.opacity = s.front || sel || hov ? 1 : 0.55;
+      const named = sel || hov || strong.has(c), cls = "lbl" + (sel ? " sel" : strong.has(c) && has ? " strong" : "");
+      if (el.dataset.key !== cls + named) {
+        el.dataset.key = cls + named; el.className = cls;
+        el.innerHTML = `<b>${c}</b>${named ? `<span>${esc(montage[c].name)}</span>` : ""}`;
+      }
+    }
+  }
+
+  // hand cursor, menu hover, zoom gauge, status
+  const cur = $("cursor");
+  if (handActive()) {
+    const [x, y] = handPx();
+    cur.style.display = "block"; cur.style.left = `${x}px`; cur.style.top = `${y}px`;
+    cur.classList.toggle("grab", hand.grabbing); cur.style.setProperty("--p", hand.progress || 0);
+  } else cur.style.display = "none";
+  if (menuOpen) {
+    const q = p || menuAt, i = menuItemAt(q[0], q[1]);
+    if (i !== menuHover) { menuHover = i; $("menu").querySelectorAll(".item").forEach((el, k) => el.classList.toggle("on", k === i)); }
+  }
+  if (now - lastUi > 150) {
+    lastUi = now; setStatus();
+    $("zoomGauge").style.display = handZoomActive() ? "block" : "none";
+    $("zoomFill").style.width = `${(DMAX - dist) / (DMAX - DMIN) * 100}%`;
+  }
+  requestAnimationFrame(frame);
+}
+
+// ====================================================================== start
+function start() {
+  renderPanel();
+  if (!gl) { $("empty").style.display = "block"; $("empty").textContent = "This browser has no WebGL 2, which the 3D brain needs."; return; }
+  P.holo = program(HOLO_VS, HOLO_FS, ["uProj", "uView", "uModel", "uEye", "uBody", "uRim", "uGlow"]);
+  P.spark = program(SPARK_VS, SPARK_FS, ["uProj", "uView", "uModel", "uPx", "uTime"]);
+  P.line = program(LINE_VS, LINE_FS, ["uProj", "uView", "uModel", "uTime"]);
+  const b = buildBrain();
+  brain = { ...b, mesh: holoMesh(b) };
+  cere = holoMesh(buildCerebellum()); stem = holoMesh(buildStem());
+  sparks = interleaved(5, [[0, 3], [1, 1], [2, 1]]);
+  links = interleaved(4, [[0, 3], [1, 1]]);
+  buildMenu(); setStep(1);
+  if (location.protocol.startsWith("http")) connect();
+  requestAnimationFrame(frame);
+}
+window.brainExplorer = { onMessage, state: () => ({ selected, hovered, order, step, dist: distTarget, menuOpen, rot, values, strength, handZoom }) };
+start();
+</script>
+</body>
+</html>

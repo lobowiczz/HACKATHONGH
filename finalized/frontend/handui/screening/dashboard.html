@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MotorLens</title>
+<style>
+  :root {
+    --bg: #f5f7f8; --surface: #ffffff; --surface-2: #eef2f3; --border: #d9e0e3;
+    --text: #172026; --muted: #5d6b73; --accent: #0f8b8d; --accent-ink: #ffffff;
+    --accent-soft: #d8f0f0; --ok: #2f8f5b; --ok-soft: #dcf2e5; --warn: #b7791f; --warn-soft: #fbefd5;
+    --danger: #c0392b; --grid: #e3e8ea; --series: #0f8b8d; --series-2: #7a8a94;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1417; --surface: #151e22; --surface-2: #1c282d; --border: #2a393f;
+      --text: #e6eef0; --muted: #93a4ab; --accent: #3ec1c3; --accent-ink: #062325;
+      --accent-soft: #123a3c; --ok: #5cc98a; --ok-soft: #153324; --warn: #e5ad4c; --warn-soft: #3a2c10;
+      --danger: #ff7a69; --grid: #26343a; --series: #3ec1c3; --series-2: #7f929b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  header { display: flex; align-items: center; gap: 14px; padding: 14px 24px; background: var(--surface);
+           border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: .2px; }
+  .logo svg { width: 28px; height: 28px; }
+  .tagline { color: var(--muted); font-size: 13px; }
+  .spacer { flex: 1; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+          background: var(--surface-2); font-size: 12.5px; color: var(--muted); border: 1px solid var(--border); }
+  .pill i { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); display: inline-block; }
+  .pill.on i { background: var(--ok); }
+  #sim-banner { display: none; background: var(--warn-soft); color: var(--warn); padding: 8px 24px;
+                font-weight: 600; font-size: 13.5px; border-bottom: 1px solid var(--border); }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; padding: 20px 24px 8px;
+         max-width: 1380px; margin: 0 auto; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; padding: 16px; } header { padding: 12px 16px; } }
+  section, aside > div { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+                         padding: 18px 20px; }
+  h2 { margin: 0 0 12px; font-size: 13px; letter-spacing: .8px; text-transform: uppercase; color: var(--muted);
+       font-weight: 650; }
+  .stack { display: grid; gap: 20px; align-content: start; min-width: 0; }
+
+  .picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 640px) { .picker { grid-template-columns: 1fr; } }
+  .card { text-align: left; background: var(--surface-2); border: 2px solid transparent; border-radius: 12px;
+          padding: 12px 14px; transition: border-color .15s, background .15s; }
+  .card:hover:not(:disabled) { border-color: var(--border); }
+  .card[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .card:disabled { opacity: .55; cursor: default; }
+  .card b { display: block; font-size: 15px; }
+  .card span { color: var(--muted); font-size: 12.5px; }
+
+  .stage { margin-top: 16px; min-height: 250px; border-radius: 12px; background: var(--surface-2); padding: 20px;
+           display: grid; place-items: center; text-align: center; }
+  .stage .big { font-size: 88px; font-weight: 750; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .stage p { margin: 8px auto 0; max-width: 52ch; color: var(--muted); }
+  .stage h3 { margin: 0; font-size: 20px; }
+  .ring { position: relative; width: 112px; height: 112px; margin: 0 auto; }
+  .ring svg { transform: rotate(-90deg); }
+  .ring .num { position: absolute; inset: 0; display: grid; place-items: center; font-size: 30px; font-weight: 700;
+               font-variant-numeric: tabular-nums; }
+  .live { width: 100%; display: grid; grid-template-columns: 130px 1fr; gap: 18px; align-items: center; text-align: left; }
+  @media (max-width: 640px) { .live { grid-template-columns: 1fr; text-align: center; } }
+  canvas { width: 100%; display: block; }
+  #live-canvas { height: 130px; }
+  .actions { display: flex; gap: 10px; margin-top: 16px; align-items: center; flex-wrap: wrap; }
+  .btn { border: 1px solid var(--border); background: var(--surface-2); padding: 9px 18px; border-radius: 10px; font-weight: 600; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .hint { color: var(--muted); font-size: 13px; }
+  .pulse { width: 70px; height: 70px; border-radius: 50%; margin: 0 auto 14px; background: var(--accent-soft);
+           border: 3px solid var(--accent); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { transform: scale(1.18); opacity: .6; } }
+  @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+
+  #result { display: none; }
+  .notes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .note { padding: 6px 12px; border-radius: 999px; font-size: 13.5px; font-weight: 550; }
+  .note.ok { background: var(--ok-soft); color: var(--ok); }
+  .note.notice { background: var(--warn-soft); color: var(--warn); }
+  .note.info { background: var(--surface-2); color: var(--muted); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .tile { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; }
+  .tile .label { color: var(--muted); font-size: 12.5px; }
+  .tile .value { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tile .value small { font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 3px; }
+  .delta { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px;
+           background: var(--surface); color: var(--muted); margin-top: 2px; }
+  .delta.better { color: var(--ok); background: var(--ok-soft); }
+  .delta.worse { color: var(--warn); background: var(--warn-soft); }
+  .chart-title { font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  .chart { height: 190px; }
+  .chart.short { height: 130px; }
+
+  .trend-metric { margin-bottom: 14px; }
+  .trend-metric .chart { height: 90px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th { text-align: left; color: var(--muted); font-weight: 600; padding: 4px 6px; }
+  td { padding: 6px 6px; border-top: 1px solid var(--border); }
+  .empty { color: var(--muted); font-size: 13.5px; }
+  .disclaimer { font-size: 12.5px; color: var(--muted); }
+  footer { max-width: 1380px; margin: 0 auto; padding: 8px 24px 28px; font-size: 12.5px; color: var(--muted); }
+  #toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--text);
+           color: var(--bg); padding: 10px 18px; border-radius: 10px; font-weight: 600; display: none; z-index: 5; }
+
+  @media print {
+    :root { --bg: #fff; --surface: #fff; --surface-2: #f2f4f5; --text: #000; --border: #bbb; }
+    header .pill, #picker-section, .actions, #toast, .stage, #sim-banner:not(.keep) { display: none !important; }
+    main { grid-template-columns: 1fr; padding: 0; }
+    section, aside > div { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/>
+      <path d="M9 22V12.5a1.5 1.5 0 0 1 3 0V17m0-6a1.5 1.5 0 0 1 3 0v6m0-5.5a1.5 1.5 0 0 1 3 0V17m0-3a1.5 1.5 0 0 1 3 0v6c0 3-2 5-5 5h-1c-3 0-5-1.5-6.5-4.5l-1-2a1.4 1.4 0 0 1 2.4-1.4L12 20"
+        fill="none" stroke="var(--accent-ink)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    MotorLens
+  </div>
+  <span class="tagline">Hand-function screening and tracking from a webcam</span>
+  <span class="spacer"></span>
+  <span class="pill" id="source-pill" hidden></span>
+  <span class="pill" id="conn"><i></i><span>connecting…</span></span>
+</header>
+<div id="sim-banner"></div>
+
+<main>
+  <div class="stack">
+    <section id="picker-section">
+      <h2>Choose a test</h2>
+      <div class="picker" id="picker"></div>
+      <div class="stage" id="stage"></div>
+      <div class="actions">
+        <button class="btn primary" id="start">Start test</button>
+        <button class="btn" id="cancel" hidden>Cancel</button>
+        <span class="hint" id="hint">Each test takes 10 seconds. Use the same hand each time to compare sessions.</span>
+      </div>
+    </section>
+
+    <section id="result">
+      <h2 id="result-title">Result</h2>
+      <div class="notes" id="notes"></div>
+      <div class="tiles" id="tiles"></div>
+      <div id="charts"></div>
+    </section>
+  </div>
+
+  <aside class="stack">
+    <div>
+      <h2>Progress over time</h2>
+      <div id="trends"></div>
+    </div>
+    <div>
+      <h2>Sessions</h2>
+      <div id="sessions"></div>
+      <div class="actions"><button class="btn" id="print">Print report</button></div>
+    </div>
+    <div class="disclaimer">
+      MotorLens is a screening and tracking aid, not a medical device, and it does not diagnose any condition.
+      Compare results with your own earlier sessions rather than with other people. Video stays on this
+      computer; only hand landmarks are analysed, and results are saved to a local file.
+    </div>
+  </aside>
+</main>
+<footer>Amplitudes are measured in palm sizes, so results do not depend on camera distance. For best results use
+  steady light, keep the whole hand in view and face the palm toward the camera.</footer>
+<div id="toast" role="status"></div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const el = (tag, props = {}, ...kids) => {
+  const n = Object.assign(document.createElement(tag), props);
+  n.append(...kids);
+  return n;
+};
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+// What each test measures. good: +1 = higher is better, -1 = lower is better.
+const METRICS = {
+  tapping: [
+    ["count", "Taps", "", 0, 1, +1, "Completed thumb-index taps"],
+    ["rate_hz", "Speed", "Hz", 1, 1, +1, "Taps per second"],
+    ["amplitude_mean", "Movement size", "% palm", 0, 100, +1, "How far the fingers open, as a percentage of palm width"],
+    ["amplitude_decrement_pct", "Size change", "%", 0, 1, +1, "Change in size from the first third to the last third of the test. Negative means movements shrank"],
+    ["rhythm_cv_pct", "Rhythm variability", "%", 0, 1, -1, "How uneven the gaps between taps are. Lower is steadier"],
+    ["hesitations", "Pauses", "", 0, 1, -1, "Gaps much longer than the usual beat"],
+  ],
+  open_close: [
+    ["count", "Cycles", "", 0, 1, +1, "Completed open-and-close cycles"],
+    ["rate_hz", "Speed", "Hz", 1, 1, +1, "Cycles per second"],
+    ["amplitude_mean", "Movement size", "% range", 0, 100, +1, "How fully the hand opens and closes"],
+    ["amplitude_decrement_pct", "Size change", "%", 0, 1, +1, "Change in size from the first third to the last third of the test. Negative means movements shrank"],
+    ["rhythm_cv_pct", "Rhythm variability", "%", 0, 1, -1, "How uneven the gaps between cycles are. Lower is steadier"],
+    ["hesitations", "Pauses", "", 0, 1, -1, "Gaps much longer than the usual beat"],
+  ],
+  tremor: [
+    ["dominant_hz", "Dominant frequency", "Hz", 1, 1, 0, "Strongest rhythm found in the hand's position between 3 and 12 Hz"],
+    ["band_rms_pct", "Tremor-band size", "% palm", 2, 1, -1, "Size of 3 to 12 Hz oscillation, as a percentage of palm width"],
+    ["peak_ratio", "Peak strength", "× noise", 0, 1, -1, "How far the strongest rhythm stands above the background"],
+  ],
+};
+const TREND_KEYS = { tapping: ["rate_hz", "amplitude_mean"], open_close: ["rate_hz", "amplitude_mean"], tremor: ["band_rms_pct"] };
+
+const app = { ws: null, init: null, history: [], phase: "idle", activeTest: null, selected: "tapping", live: [], result: null };
+
+// ---------- connection ----------
+function connect() {
+  const ws = new WebSocket(`ws://${location.host}/`);
+  app.ws = ws;
+  ws.onopen = () => { setConn(true); send({ cmd: "hello" }); };
+  ws.onclose = () => { setConn(false); setTimeout(connect, 1000); };
+  ws.onmessage = (e) => handle(JSON.parse(e.data));
+}
+const send = (m) => app.ws && app.ws.readyState === 1 && app.ws.send(JSON.stringify(m));
+function setConn(on) {
+  $("conn").classList.toggle("on", on);
+  $("conn").lastChild.textContent = on ? "connected" : "reconnecting…";
+}
+function toast(text) {
+  const t = $("toast");
+  t.textContent = text; t.style.display = "block";
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => (t.style.display = "none"), 3500);
+}
+
+function handle(m) {
+  if (m.type === "init") {
+    app.init = m; app.history = m.history;
+    buildPicker(); renderBanner(); render();
+  } else if (m.type === "signal") {
+    onSignal(m);
+  } else if (m.type === "phase") {
+    app.phase = m.phase; app.activeTest = m.test; app.remaining = m.remaining; app.total = m.total;
+    if (m.phase === "idle") app.live = [];
+    render();
+  } else if (m.type === "aborted") {
+    toast({ no_hand: "No hand detected, test cancelled.", hand_lost: "Hand left the camera view, test cancelled.",
+            cancelled: "Test cancelled." }[m.reason] || "Test cancelled.");
+  } else if (m.type === "result") {
+    const { series, ...summary } = m.record;
+    app.history.push(summary); app.result = m.record; app.selected = m.record.test;
+    render(); showResult(); $("result").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+}
+
+// ---------- picker and stage ----------
+function buildPicker() {
+  const p = $("picker"); p.replaceChildren();
+  for (const [key, t] of Object.entries(app.init.tests)) {
+    const b = el("button", { className: "card", id: "card-" + key }, el("b", {}, t.title), el("span", {}, `${t.duration} s`));
+    b.onclick = () => { app.selected = key; app.result = null; $("result").style.display = "none"; render(); };
+    p.append(b);
+  }
+}
+function renderBanner() {
+  const sim = app.init.source === "simulated";
+  const b = $("sim-banner");
+  b.style.display = sim ? "block" : "none";
+  b.textContent = sim ? `SIMULATED HAND (${app.init.profile}: ${app.init.profiles[app.init.profile]}). Not real data.` : "";
+  const pill = $("source-pill"); pill.hidden = false;
+  pill.textContent = sim ? "Simulation" : "Camera";
+}
+
+function render() {
+  if (!app.init) return;
+  const busy = app.phase !== "idle";
+  for (const key of Object.keys(app.init.tests)) {
+    const c = $("card-" + key);
+    c.setAttribute("aria-pressed", String(key === (busy ? app.activeTest : app.selected)));
+    c.disabled = busy;
+  }
+  $("start").hidden = busy; $("cancel").hidden = !busy;
+  const test = app.init.tests[busy ? app.activeTest : app.selected];
+  const stage = $("stage"); stage.replaceChildren();
+  if (app.phase === "idle") {
+    stage.append(el("div", {}, el("h3", {}, test.title), el("p", {}, test.prompt),
+      el("p", { className: "hint" }, "Press Start, then hold your hand up to the camera.")));
+  } else if (app.phase === "waiting") {
+    stage.append(el("div", {}, el("div", { className: "pulse" }), el("h3", {}, "Show your hand to the camera"),
+      el("p", {}, test.prompt)));
+  } else if (app.phase === "countdown") {
+    stage.append(el("div", {}, el("div", { className: "big" }, String(Math.max(1, Math.ceil(app.remaining)))),
+      el("p", {}, test.prompt)));
+  } else if (app.phase === "running") {
+    const R = 50, C = 2 * Math.PI * R, frac = app.total ? app.remaining / app.total : 0;
+    const ring = el("div", { className: "ring" });
+    ring.innerHTML = `<svg width="112" height="112" viewBox="0 0 112 112"><circle cx="56" cy="56" r="${R}" fill="none" stroke="var(--border)" stroke-width="8"/>` +
+      `<circle cx="56" cy="56" r="${R}" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/></svg>`;
+    ring.append(el("div", { className: "num" }, String(Math.ceil(app.remaining))));
+    stage.append(el("div", { className: "live" }, el("div", {}, ring),
+      el("div", {}, el("h3", {}, test.title), el("p", {}, test.prompt), el("canvas", { id: "live-canvas" }))));
+    drawLive();
+  }
+  renderHistory();
+}
+$("start").onclick = () => send({ cmd: "start", test: app.selected });
+$("cancel").onclick = () => send({ cmd: "cancel" });
+$("print").onclick = () => window.print();
+
+// ---------- live trace ----------
+function onSignal(m) {
+  if (app.phase !== "running" || !m.present) return;
+  const key = app.activeTest === "tapping" ? "pinch" : app.activeTest === "open_close" ? "fist" : null;
+  const v = key ? m[key] : m.palm[0];
+  app.live.push([m.t, v]);
+  while (app.live.length && m.t - app.live[0][0] > 5) app.live.shift();
+  if (!onSignal.raf) onSignal.raf = requestAnimationFrame(() => { onSignal.raf = 0; drawLive(); });
+}
+function drawLive() {
+  const c = $("live-canvas"); if (!c || app.live.length < 2) return;
+  const x = prep(c), w = c.clientWidth, h = c.clientHeight;
+  const ys = app.live.map((p) => p[1]);
+  let lo = Math.min(...ys), hi = Math.max(...ys);
+  if (hi - lo < (app.activeTest === "tremor" ? 0.02 : 0.3)) { const mid = (hi + lo) / 2, r = app.activeTest === "tremor" ? 0.01 : 0.15; lo = mid - r; hi = mid + r; }
+  const t1 = app.live[app.live.length - 1][0];
+  x.strokeStyle = css("--series"); x.lineWidth = 2; x.lineJoin = "round"; x.beginPath();
+  app.live.forEach(([t, v], i) => {
+    const px = w - ((t1 - t) / 5) * w, py = h - 8 - ((v - lo) / (hi - lo)) * (h - 16);
+    i ? x.lineTo(px, py) : x.moveTo(px, py);
+  });
+  x.stroke();
+}
+
+// ---------- charts ----------
+function prep(canvas) {
+  const dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  return ctx;
+}
+function niceTicks(lo, hi, n = 4) {
+  const span = hi - lo || 1, raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map((s) => s * mag).find((s) => s >= raw);
+  const out = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(10));
+  return out;
+}
+// opts: lines [{x,y,color,width}], dots [{x,y,color,r}], bands [[x0,x1]], bars [{x,y,w}], xr, yr, xlabel, ylabel, yfmt
+function chart(canvas, o) {
+  const ctx = prep(canvas), W = canvas.clientWidth, H = canvas.clientHeight;
+  const m = { l: 44, r: 10, t: 8, b: 26 };
+  const [x0, x1] = o.xr, [y0, y1] = o.yr;
+  const X = (v) => m.l + ((v - x0) / (x1 - x0)) * (W - m.l - m.r);
+  const Y = (v) => H - m.b - ((v - y0) / (y1 - y0)) * (H - m.t - m.b);
+  ctx.font = "11px system-ui"; ctx.fillStyle = css("--muted"); ctx.strokeStyle = css("--grid"); ctx.lineWidth = 1;
+  for (const [a, b] of o.bands || []) { ctx.fillStyle = css("--accent-soft"); ctx.fillRect(X(a), m.t, X(b) - X(a), H - m.t - m.b); }
+  ctx.fillStyle = css("--muted");
+  ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for (const v of niceTicks(y0, y1, 4)) {
+    ctx.beginPath(); ctx.moveTo(m.l, Y(v)); ctx.lineTo(W - m.r, Y(v)); ctx.stroke();
+    ctx.fillText((o.yfmt || ((q) => +q.toPrecision(3)))(v), m.l - 6, Y(v));
+  }
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  for (const v of niceTicks(x0, x1, 6)) ctx.fillText(String(v), X(v), H - m.b + 6);
+  if (o.xlabel) { ctx.textAlign = "right"; ctx.fillText(o.xlabel, W - m.r, H - 12); }
+  for (const b of o.bars || []) { ctx.fillStyle = b.color || css("--series"); ctx.fillRect(X(b.x - b.w / 2), Y(b.y), X(b.x + b.w / 2) - X(b.x - b.w / 2), Y(y0) - Y(b.y)); }
+  for (const l of o.lines || []) {
+    ctx.strokeStyle = l.color; ctx.lineWidth = l.width || 1.8; ctx.lineJoin = "round"; ctx.beginPath();
+    l.x.forEach((v, i) => (i ? ctx.lineTo(X(v), Y(l.y[i])) : ctx.moveTo(X(v), Y(l.y[i]))));
+    ctx.stroke();
+  }
+  for (const d of o.dots || []) {
+    ctx.fillStyle = d.color; ctx.beginPath(); d.x.forEach((v, i) => { ctx.moveTo(X(v) + d.r, Y(d.y[i])); ctx.arc(X(v), Y(d.y[i]), d.r, 0, 7); }); ctx.fill();
+  }
+  if (o.label) { ctx.fillStyle = css("--text"); ctx.font = "600 12px system-ui"; ctx.textAlign = "left"; ctx.fillText(o.label.text, X(o.label.x) + 6, Y(o.label.y) - 14); }
+}
+const range = (a, pad = 0.08) => {
+  const lo = Math.min(...a), hi = Math.max(...a), p = (hi - lo || 1) * pad;
+  return [lo - p, hi + p];
+};
+
+// ---------- result ----------
+function showResult() {
+  const r = app.result; if (!r) return;
+  $("result").style.display = "block";
+  $("result-title").textContent = `${app.init.tests[r.test].title}: result`;
+  const base = baselineFor(r);
+  $("notes").replaceChildren(...r.observations.map((o) => el("span", { className: "note " + o.level }, o.text)),
+    ...(base ? [] : [el("span", { className: "note info" }, "First session for this test: saved as your baseline")]));
+  const tiles = $("tiles"); tiles.replaceChildren();
+  for (const [key, label, unit, dec, scale, good, hint] of METRICS[r.test]) {
+    const v = r.metrics[key];
+    const val = v == null ? "—" : (v * scale).toFixed(dec);
+    const tile = el("div", { className: "tile", title: hint }, el("div", { className: "label" }, label),
+      el("div", { className: "value" }, val, ...(v == null || !unit ? [] : [el("small", {}, unit)])));
+    const chip = deltaChip(key, v, base, good);
+    if (chip) tile.append(chip);
+    tiles.append(tile);
+  }
+
+  const charts = $("charts"); charts.replaceChildren();
+  const mk = (title, cls) => { const c = el("canvas", { className: "chart " + (cls || "") }); charts.append(el("div", { className: "chart-title" }, title), c); return c; };
+  const s = r.series, last = r.duration;
+  if (r.test === "tremor") {
+    const px = s.v.map((p) => p[0] * 100), py = s.v.map((p) => p[1] * 100);
+    const [a, b] = range([...px, ...py]);
+    const c1 = mk("Hand position while held still (% of palm width, centred)");
+    const c2 = mk("Vibration spectrum (shaded: 3 to 12 Hz tremor band)");
+    app.drawResult = () => {
+      chart(c1, { xr: [0, last], yr: [a, b], xlabel: "seconds", lines: [{ x: s.t, y: px, color: css("--series") }, { x: s.t, y: py, color: css("--series-2"), width: 1.2 }] });
+      const pk = r.metrics.dominant_hz;
+      const i = s.freq.reduce((best, f, k) => (Math.abs(f - pk) < Math.abs(s.freq[best] - pk) ? k : best), 0);
+      chart(c2, { xr: [0, 14], yr: [0, Math.max(...s.psd) * 1.15], xlabel: "Hz", bands: [[3, 12]], yfmt: () => "",
+        lines: [{ x: s.freq, y: s.psd, color: css("--series") }], dots: [{ x: [pk], y: [s.psd[i]], color: css("--warn"), r: 4 }],
+        label: { x: pk, y: s.psd[i], text: `${pk.toFixed(1)} Hz` } });
+    };
+  } else {
+    const c1 = mk("Finger signal over the test (dots mark counted cycles)");
+    const c2 = mk("Size of each cycle (palm widths)", "short");
+    app.drawResult = () => {
+      chart(c1, { xr: [0, last], yr: range(s.v), xlabel: "seconds", lines: [{ x: s.t, y: s.v, color: css("--series") }],
+        dots: [{ x: s.peak_t, y: s.peak_v, color: css("--warn"), r: 3 }] });
+      const n = s.amplitudes.length;
+      chart(c2, { xr: [0.4, Math.max(n, 1) + 0.6], yr: [0, Math.max(...s.amplitudes, 0.1) * 1.15], xlabel: "cycle",
+        bars: s.amplitudes.map((y, i) => ({ x: i + 1, y, w: 0.7 })) });
+    };
+  }
+  app.drawResult();
+}
+function baselineFor(r) {
+  return app.history.find((h) => h.test === r.test && h.hand === r.hand && h.id !== r.id) || null;
+}
+function deltaChip(key, v, base, good) {
+  if (!base) return null;
+  const b = base.metrics[key];
+  if (v == null || b == null) return el("span", { className: "delta" }, "no comparison");
+  const pct = key === "amplitude_decrement_pct";
+  const d = pct ? v - b : b ? ((v - b) / Math.abs(b)) * 100 : 0;
+  const text = `${d >= 0 ? "+" : ""}${d.toFixed(pct ? 0 : 0)}${pct ? " pts" : "%"} vs first`;
+  const small = Math.abs(d) < (pct ? 5 : 8);
+  const better = good && !small && (d > 0) === (good > 0);
+  return el("span", { className: "delta " + (small || !good ? "" : better ? "better" : "worse") }, text);
+}
+
+// ---------- history ----------
+function renderHistory() {
+  const test = app.phase === "idle" ? app.selected : app.activeTest;
+  const rows = app.history.filter((h) => h.test === test);
+  const trends = $("trends"); trends.replaceChildren();
+  if (!rows.length) {
+    trends.append(el("p", { className: "empty" }, "Run this test to start a baseline. Later sessions are compared with the first."));
+  } else {
+    for (const key of TREND_KEYS[test]) {
+      const [, label, unit, dec, scale] = METRICS[test].find((m) => m[0] === key);
+      const ys = rows.map((r) => r.metrics[key] == null ? null : r.metrics[key] * scale);
+      const xs = rows.map((_, i) => i + 1);
+      const latest = ys[ys.length - 1];
+      const box = el("div", { className: "trend-metric" }, el("div", { className: "chart-title" },
+        `${label}${unit ? " (" + unit + ")" : ""}: ${latest == null ? "—" : latest.toFixed(dec)}`));
+      const c = el("canvas", { className: "chart" }); box.append(c); trends.append(box);
+      const pts = xs.map((x, i) => [x, ys[i]]).filter((p) => p[1] != null);
+      if (pts.length) {
+        const [lo, hi] = range(pts.map((p) => p[1]), 0.25);
+        requestAnimationFrame(() => chart(c, { xr: [0.5, Math.max(rows.length, 1) + 0.5], yr: [lo, hi], xlabel: "session",
+          yfmt: (v) => v.toFixed(dec), lines: [{ x: pts.map((p) => p[0]), y: pts.map((p) => p[1]), color: css("--series") }],
+          dots: [{ x: pts.map((p) => p[0]), y: pts.map((p) => p[1]), color: css("--series"), r: 3.5 }] }));
+      }
+    }
+  }
+  const s = $("sessions"); s.replaceChildren();
+  const all = [...app.history].reverse().slice(0, 8);
+  if (!all.length) { s.append(el("p", { className: "empty" }, "No sessions yet.")); return; }
+  const tb = el("tbody");
+  for (const h of all) {
+    const m = h.metrics;
+    const headline = h.test === "tremor" ? `${m.dominant_hz == null ? "—" : m.dominant_hz.toFixed(1)} Hz` : `${m.rate_hz.toFixed(1)} Hz`;
+    const d = new Date(h.at);
+    tb.append(el("tr", {}, el("td", {}, d.toLocaleDateString([], { month: "short", day: "numeric" }) + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })),
+      el("td", {}, app.init.tests[h.test].title), el("td", {}, h.hand ? h.hand[0] : ""), el("td", {}, headline)));
+  }
+  s.append(el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, "When"), el("th", {}, "Test"), el("th", {}, "Hand"), el("th", {}, "Rate / freq"))), tb));
+}
+
+// Charts are canvas bitmaps, so redraw when the size or colour scheme changes.
+const redraw = () => { if (app.result && app.drawResult) app.drawResult(); renderHistory(); };
+addEventListener("resize", redraw);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redraw);
+addEventListener("beforeprint", redraw);
+
+connect();
+</script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Hand UI bridge demo</title>
+<style>
+  body { margin: 0; font: 14px system-ui, sans-serif; background: #111; color: #eee; height: 100vh; overflow: hidden; }
+  #dot { position: fixed; width: 28px; height: 28px; margin: -14px; border-radius: 50%; background: #4cc9f0; transition: background .1s; pointer-events: none; }
+  #dot.grab { background: #f72585; }
+  #dot.gone { opacity: .2; }
+  #log { position: fixed; left: 12px; bottom: 12px; margin: 0; max-height: 40vh; overflow: hidden; opacity: .85; }
+  #status { position: fixed; top: 12px; left: 12px; }
+</style>
+<div id="status">connecting…</div>
+<div id="dot" class="gone"></div>
+<pre id="log"></pre>
+<script>
+  // Run `python -m handui --bridge` first. Same JSON as in the README.
+  const dot = document.getElementById("dot"), log = document.getElementById("log"), status = document.getElementById("status");
+  const lines = [];
+  function connect() {
+    const ws = new WebSocket("ws://127.0.0.1:8765");
+    ws.onopen = () => status.textContent = "connected";
+    ws.onclose = () => { status.textContent = "disconnected, retrying…"; setTimeout(connect, 1000); };
+    ws.onmessage = (e) => {
+      const m = JSON.parse(e.data);
+      if (m.type === "state") {
+        dot.style.left = m.cursor[0] * innerWidth + "px";
+        dot.style.top = m.cursor[1] * innerHeight + "px";
+        dot.classList.toggle("grab", m.grabbing);
+        dot.classList.toggle("gone", !m.present);
+      } else if (m.type === "event" && m.kind !== "grab_move") {
+        lines.push(`${m.kind} ${JSON.stringify(m.data)}`);
+        log.textContent = lines.slice(-12).join("\n");
+      }
+    };
+  }
+  connect();
+</script>

@@ -1,0 +1,17 @@
+# Frontend: hand tracking and the Brain Explorer
+mediapipe>=0.10.20
+opencv-python>=4.9
+numpy>=1.26
+scipy>=1.11
+scikit-learn==1.9.1   # the Parkinson's model was saved with this exact version
+
+# Backend: the ADHD and Parkinson's model APIs
+fastapi
+uvicorn
+pydantic
+torch
+joblib
+
+# tools/build_heldout.py and the backend tests
+pandas
+httpx
