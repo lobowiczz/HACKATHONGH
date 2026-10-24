@@ -1,236 +1,217 @@
-# 🧠 EEGenius — AI-Powered Neurological Diagnostics
+# EEGenius Brain Explorer
 
-**EEGenius** is a next-generation neurological diagnostics platform that leverages **deep learning** and **EEG signal processing** to detect early biomarkers of Parkinson's Disease and ADHD. Built with a cyberpunk aesthetic, the platform provides an immersive interface for exploring the intersection of AI and neuroscience.
+An interactive, AI-assisted neurological screening demonstration for exploring ADHD EEG data and Parkinson’s voice data through a hand-controlled 3D brain interface.
 
-> ⚠️ **Disclaimer:** This tool is for **educational and demonstration purposes only**. It has NOT been evaluated by the FDA or any medical regulatory body. Always consult a qualified healthcare provider.
+![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-Model-EE4C2C?logo=pytorch&logoColor=white)
+![MediaPipe](https://img.shields.io/badge/MediaPipe-Hand_Tracking-0097A7)
+![WebGL2](https://img.shields.io/badge/WebGL2-3D_Visualization-990000)
 
----
+> **Important:** EEGenius Brain Explorer is intended for research and demonstration purposes only. It does not provide medical advice or a clinical diagnosis.
 
-## 🌐 Live Site
+## Overview
 
-**[eegenius.co](https://eegenius.co/)**
+EEGenius Brain Explorer combines machine learning, computer vision, and interactive 3D visualization in one application. Users can choose a held-out patient sample, explore the associated data on a holographic brain model, and review a transparent AI analysis.
 
----
+The application supports two screening demonstrations:
 
-## 📂 Project Structure
+- **ADHD:** analyzes 19-channel EEG amplitude features using a PyTorch neural network.
+- **Parkinson’s disease:** analyzes voice-recording features using a gradient-boosted model, with a smaller neural network shown as a secondary opinion.
 
+All patient options shown in the interface come from held-out test data and were not used to train the models.
+
+## Key Features
+
+- Touch-free navigation using a webcam and MediaPipe hand tracking.
+- Interactive WebGL 3D brain visualization.
+- ADHD analysis based on 19 EEG channels.
+- Parkinson’s analysis based on voice-recording features.
+- Held-out patient samples for realistic demonstrations.
+- Prediction probabilities and dataset labels.
+- Feature-driver explanations for each prediction.
+- Comparisons with the models’ training populations.
+- Person-level summaries across multiple recordings.
+- Model performance and limitation information displayed alongside results.
+- Mouse and keyboard controls when a camera is unavailable.
+
+## System Architecture
+
+```mermaid
+flowchart LR
+    Camera[Webcam] --> MediaPipe[MediaPipe Hand Landmarks]
+    MediaPipe --> Gestures[Gesture Engine]
+    Gestures -- WebSocket :8765 --> UI[Brain Explorer WebGL Interface]
+    UI -- GET /heldout-samples<br/>POST /analyze --> ADHD[ADHD API :8011]
+    UI -- GET /heldout-samples<br/>POST /analyze --> Parkinsons[Parkinson's API :8012]
 ```
-EEGENIUS/
-├── index.html                  # Main landing page (security gate + navigation)
-├── sitemap.xml                 # SEO sitemap
-├── parkinsons-ai/              # Parkinson's Disease Detection Module
-│   ├── index.html              # Frontend UI for Parkinson's prediction
-│   ├── main.py                 # FastAPI backend + heuristic prediction engine
-│   ├── parkinsons_model.pth    # Trained PyTorch neural network weights
-│   ├── scaling_params.json     # Feature normalization parameters
-│   ├── requirements.txt        # Python dependencies
-│   └── Start_AI.bat            # Windows launcher script
-├── adhd-ai/                    # ADHD Detection Module
-│   ├── index.html              # Frontend UI for ADHD prediction
-│   ├── main.py                 # FastAPI backend for ADHD classification
-│   ├── adhd_predictor_model_v1.pth  # Trained PyTorch model weights
-│   ├── requirements.txt        # Python dependencies
-│   └── Start_AI.bat            # Windows launcher script
-├── article/                    # SEO article: IGCSE revision resources
-│   └── index.html
-├── disclaimer/                 # Legal disclaimer page
-│   └── index.html
-├── images/                     # Image assets
-├── music/                      # SFX audio files
-└── favicon1/                   # Favicon & PWA manifest
+
+The root launcher starts the two FastAPI model servers, waits until they are ready, and then opens the Brain Explorer interface.
+
+## Technology Stack
+
+| Area | Technologies |
+| --- | --- |
+| Language | Python 3.11 |
+| Backend APIs | FastAPI, Uvicorn, Pydantic |
+| Machine learning | PyTorch, scikit-learn, joblib |
+| Computer vision | MediaPipe, OpenCV |
+| Data processing | NumPy, SciPy, pandas |
+| Frontend | HTML, JavaScript, WebGL2 |
+| Communication | HTTP and local WebSocket |
+
+## Project Structure
+
+```text
+.
+├── backend/
+│   ├── adhd/                 # ADHD API, model, scaler, and held-out samples
+│   └── parkinsons/           # Parkinson's API, models, and held-out samples
+├── frontend/
+│   ├── handui/               # Hand tracking, gestures, bridge, and interfaces
+│   │   ├── brain/            # Brain Explorer runner and WebGL viewer
+│   │   └── screening/        # MotorLens hand-function screening
+│   ├── examples/             # Local WebSocket bridge example
+│   └── tests/                # Frontend and gesture tests
+├── tests/                    # Backend tests
+├── tools/                    # Held-out dataset preparation utilities
+├── requirements.txt          # Python dependencies
+└── run.py                    # Complete application launcher
 ```
 
----
+## Requirements
 
-## 🚀 Features
+- macOS, Linux, or Windows
+- Python 3.11
+- A webcam for hand controls
+- A modern browser with WebGL2 support
 
-### 🔴 Parkinson's Disease Detection
-- **27 input biomarkers** including Pitch Period Entropy (PPE), EEG composite scores, Recurrence Period Density Entropy (R_PDE), and 10 Ed coefficients
-- **Hybrid prediction engine** combining a PyTorch neural network with a heuristic scoring system
-- **Real-time probability** output with binary classification (Parkinson's / Control)
+On macOS, grant camera access to the application that launches Python under **System Settings → Privacy & Security → Camera**.
 
-### 🔵 ADHD Detection
-- **19-channel EEG analysis** across standard 10-20 system regions (Fp1, Fp2, F3, F4, C3, C4, P3, P4, O1, O2, F7, F8, T7, T8, P7, P8, Fz, Cz, Pz)
-- **Deep neural network** (3-layer MLP with dropout) for binary classification
-- **REST API** powered by FastAPI
+## Installation
 
-### 🎨 Immersive UI
-- **Cyberpunk / glitch-art** aesthetic with custom cursor, scanlines, and neon styling
-- **Three.js** 3D animated backgrounds with floating geometric shards
-- **GSAP** animation sequences for page transitions
-- **Security gate** keypad interface on the landing page
-- Fully responsive design
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|---|---|
-| **Frontend** | HTML5, CSS3 (Tailwind CSS), JavaScript |
-| **3D Graphics** | Three.js (r128) |
-| **Animations** | GSAP 3.12 |
-| **Backend** | Python 3.x, FastAPI, Uvicorn |
-| **Machine Learning** | PyTorch, NumPy |
-| **Fonts** | Orbitron, Rajdhani, Share Tech Mono (Google Fonts) |
-
----
-
-## ⚡ Getting Started
-
-### Prerequisites
-
-- **Python 3.8+** installed
-- **pip** package manager
-- A modern web browser (Chrome/Firefox/Edge recommended)
-
-### Installation
-
-1. **Clone the repository:**
-
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/eegenius.git
-   cd eegenius
-   ```
-
-2. **Install Python dependencies for each module:**
-
-   ```bash
-   # Parkinson's AI
-   cd parkinsons-ai
-   pip install -r requirements.txt
-
-   # ADHD AI
-   cd ../adhd-ai
-   pip install -r requirements.txt
-   ```
-
-### Running Locally
-
-#### Option 1: Using the batch files (Windows)
-
-Double-click the launcher scripts:
-- `parkinsons-ai/Start_AI.bat` — Starts the Parkinson's prediction server
-- `adhd-ai/Start_AI.bat` — Starts the ADHD prediction server
-
-#### Option 2: Manual terminal launch
+From the project root, create a virtual environment and install the dependencies:
 
 ```bash
-# Terminal 1 — Parkinson's AI (port 8000)
-cd parkinsons-ai
-uvicorn main:app --reload --port 8000
-
-# Terminal 2 — ADHD AI (port 8001)
-cd adhd-ai
-uvicorn main:app --reload --port 8001
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
 ```
 
-#### Option 3: Serve the frontend
+The first camera run may download the MediaPipe hand-landmark model.
 
-Open `index.html` directly in your browser, or use any static file server:
+## Running the Application
+
+### With camera controls
 
 ```bash
-# Using Python's built-in server
-python -m http.server 3000
-# Then visit http://localhost:3000
+.venv/bin/python run.py
 ```
 
----
+The launcher starts:
 
-## 🔌 API Reference
+- Brain Explorer at `http://127.0.0.1:8765/`
+- ADHD API at `http://127.0.0.1:8011`
+- Parkinson’s API at `http://127.0.0.1:8012`
 
-### Parkinson's Prediction
+### Without a camera
 
-```http
-POST /predict
-Content-Type: application/json
-
-{
-  "gender": 0,
-  "PPE": 0.45,
-  "EEG": 0.72,
-  "R_PDE": 0.55,
-  "numPulses": 320,
-  "numPeriodsPulses": 310,
-  "meanPeriodPulses": 0.006,
-  "stdDevPeriodPulses": 0.0004,
-  "f1": 640, "f2": 1200, "f3": 2500, "f4": 3500,
-  "b1": 200, "b2": 290, "b3": 530, "b4": 500,
-  "Ea": 99.9,
-  "Ed_1_coef": 0.002, "Ed_2_coef": 0.002,
-  "Ed_3_coef": 0.002, "Ed_4_coef": 0.004,
-  "Ed_5_coef": 0.003, "Ed_6_coef": 0.003,
-  "Ed_7_coef": 0.003, "Ed_8_coef": 0.013,
-  "Ed_9_coef": 0.003, "Ed_10_coef": 0.031
-}
+```bash
+.venv/bin/python run.py --no-camera
 ```
 
-**Response:**
-```json
-{
-  "prediction": "Parkinsons",
-  "probability": 0.87
-}
+This mode supports mouse and keyboard navigation.
+
+### Stop the application
+
+Press `q` in the camera preview window or press `Ctrl+C` in the terminal. Stopping the launcher also stops both model servers.
+
+## Using Brain Explorer
+
+1. Select **ADHD** or **Parkinson’s** in the interface.
+2. Choose a held-out patient or recording.
+3. Explore the 3D brain using hand gestures, mouse controls, or the keyboard.
+4. Select **Run prediction** to view the model result and explanation.
+
+### Hand Gestures
+
+| Gesture | Action |
+| --- | --- |
+| Make a fist or pinch, then move | Rotate the brain |
+| Move your palm closer or farther away | Zoom in or out |
+| Make a quick fist over a light | Select a brain region |
+| Swipe left or right | Move between regions |
+| Swipe up or down | Move between interface steps |
+| Hold an open palm | Open the radial menu |
+
+### Mouse and Keyboard Controls
+
+- Drag to rotate.
+- Click to select.
+- Scroll to zoom.
+- Use arrow keys to navigate.
+- Use `1`, `2`, and `3` to move between steps.
+- Use `M`, `L`, `N`, `Z`, and `R` for interface actions.
+
+## API Endpoints
+
+Both model APIs expose their original prediction and information endpoints and provide endpoints used by Brain Explorer.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /heldout-samples` | Returns held-out samples available in the interface |
+| `POST /analyze` | Runs a prediction and returns its explanation |
+| `GET /model-info` | Returns model metadata and performance information |
+| `GET /demo-samples` | Returns demonstration samples |
+
+ADHD analysis accepts 19 channel values. Parkinson’s analysis accepts a held-out sample ID or a complete feature object.
+
+## Model Information
+
+| | ADHD | Parkinson’s disease |
+| --- | --- | --- |
+| Input | 19 EEG channel amplitudes | 753 voice features |
+| Primary model | Three-layer neural network | Gradient-boosted trees |
+| Held-out data | 1,230 windows from 19 children | 114 recordings from 38 people |
+| Reported test result | 51% window accuracy, AUC 0.53 | 77% recording accuracy, AUC 0.87 |
+| Cross-validation | 73% ± 4 across 102 children | 86% ± 3 across 214 people |
+
+The interface presents these results with context because model performance is not equivalent to clinical reliability. In particular, the ADHD model performs close to chance on its held-out test group, while the Parkinson’s model has stronger discrimination but can still flag healthy recordings incorrectly.
+
+## Running Tests
+
+Run backend tests from the project root:
+
+```bash
+.venv/bin/python -m unittest discover -s tests
 ```
 
-### ADHD Prediction
+Run frontend tests:
 
-```http
-POST /predict
-Content-Type: application/json
-
-{
-  "data": {
-    "Fp1": 0.5, "Fp2": 0.6, "F3": 0.4, "F4": 0.5,
-    "C3": 0.3, "C4": 0.4, "P3": 0.2, "P4": 0.3,
-    "O1": 0.1, "O2": 0.2, "F7": 0.6, "F8": 0.7,
-    "T7": 0.5, "T8": 0.6, "P7": 0.3, "P8": 0.4,
-    "Fz": 0.4, "Cz": 0.3, "Pz": 0.2
-  }
-}
+```bash
+cd frontend
+../.venv/bin/python -m unittest discover -s tests
 ```
 
-**Response:**
-```json
-{
-  "prediction": "ADHD",
-  "probability": 0.76
-}
-```
+The automated tests use synthetic hand data and do not require a camera.
 
----
+## Data and Privacy
 
-## 🧪 How It Works
+The raw source datasets are not included in this repository. The project contains trained model artifacts and derived held-out samples used by the demonstration interface.
 
-The Parkinson's detection module uses a **hybrid approach**:
+Camera processing is performed locally. MotorLens screening results, when used, are stored locally under `frontend/data/` and are excluded from version control.
 
-1. **AI Model (10% weight):** A 3-layer neural network (27→64→32→1) with dropout regularization, trained on clinical biomarker data
-2. **Heuristic Engine (90% weight):** A rule-based scoring system that weights critical biomarkers (PPE, R_PDE, StdDev, EEG) against a calibrated bias threshold
-3. **Combined Output:** The final probability is a weighted blend, classified as Parkinson's if ≥ 0.5
+## Limitations and Responsible Use
 
-The ADHD module uses a more traditional deep learning approach with a 19-input neural network (19→64→32→1) operating directly on regional EEG measurements.
+- The application is not a medical device.
+- Predictions must not be treated as diagnoses.
+- ADHD assessment requires evaluation by qualified professionals using clinical history, observation, and appropriate assessment tools.
+- Parkinson’s disease diagnosis requires evaluation by a qualified clinician, typically a neurologist.
+- Dataset composition and model performance may not generalize to other populations.
+- Anyone concerned about symptoms should consult a qualified healthcare professional.
 
----
+## Team
 
-## 👤 Authors
-
-- **Adolf Lobowicz** — Co-Founder & Lead Architect — [LinkedIn](https://www.linkedin.com/in/adolf-lobowicz-497a6b372)
-- **Akriti Srivastava** — Co-Founder — [LinkedIn](https://www.linkedin.com/in/akriti-srivastava-575724321)
-
----
-
-## 📄 License
-
-This project is proprietary. All rights reserved. See the [Disclaimer](https://eegenius.co/disclaimer/) for usage terms.
-
----
-
-## ⚕️ Medical Disclaimer
-
-EEGenius is a **demonstration and educational tool**. The predictions provided are **NOT medical diagnoses** and should not be used as a substitute for professional medical advice, diagnosis, or treatment. This system has not been evaluated or cleared by the FDA or any medical regulatory body. Always consult a qualified healthcare provider or neurologist for any medical concerns.
-
----
-
-<p align="center">
-  <sub>Built with ⚡ at the intersection of neuroscience and artificial intelligence</sub>
-</p>
+- Adolf
+- Stephen
+- Elias
+- Anaman
