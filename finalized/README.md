@@ -1,4 +1,4 @@
-# EEGenius Brain Explorer
+# Brain Explorer
 
 **Pick a patient the AI has never seen, explore their data on a holographic 3D brain with your bare hands, and get a transparent AI analysis for ADHD (from EEG) or Parkinson's (from voice).**
 
