@@ -60,7 +60,8 @@ def main():
     args = ap.parse_args()
     # a kill or a closed terminal should still stop the model servers, so turn SIGTERM into a normal exit
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
-    signal.signal(signal.SIGHUP, lambda *_: sys.exit(0))
+    if hasattr(signal, "SIGHUP"):  # Unix only; not present on Windows
+        signal.signal(signal.SIGHUP, lambda *_: sys.exit(0))
 
     procs = {}
     try:
