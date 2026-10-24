@@ -9,7 +9,7 @@ inclusion: always
 
 It is built on **Hand UI**, a webcam hand-gesture interface written in Python (`handui/`). The gesture engine drives the 3D brain so the whole exploration is touchless, with mouse and keyboard as fallbacks.
 
-`finalized/` holds the full product: two FastAPI model servers (`backend/adhd`, `backend/parkinsons`), the hand-tracking frontend (`frontend/handui`), and `run.py`, which starts all three.
+The repo root holds the full product: two FastAPI model servers (`backend/adhd`, `backend/parkinsons`), the hand-tracking frontend (`frontend/handui`), and `run.py`, which starts all three.
 
 ## Principles
 - **The hand must earn its place.** Gesture input is only worth building where touch or keyboard fails, or where exploring in 3D is genuinely better by hand.

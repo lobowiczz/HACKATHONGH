@@ -7,7 +7,7 @@ rows are rebuilt with the same code as training/train_adhd.py and
 training/train_parkinsons*.py, and the script checks itself against the demo
 samples those training scripts wrote.
 
-Usage (from finalized/):
+Usage (from the repo root):
   .venv/bin/python tools/build_heldout.py \
       --adhd-csv ~/Pictures/EEG/eeg/adhdata.csv --pd-csv ~/Pictures/EEG/eeg/pd_EEG_features.csv
 """

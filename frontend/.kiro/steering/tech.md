@@ -21,7 +21,7 @@ inclusion: always
 .venv/bin/python -m unittest discover -s tests          # frontend tests (75 at last count)
 ```
 
-The shipped product normally runs from `finalized/` with `python run.py` (camera) or `python run.py --no-camera`, which starts both model servers and the Brain Explorer together. On Windows use `.venv\Scripts\python.exe`.
+The shipped product normally runs from the repo root with `python run.py` (camera) or `python run.py --no-camera`, which starts both model servers and the Brain Explorer together. On Windows use `.venv\Scripts\python.exe`.
 
 ## Environment gotchas
 - macOS camera permission belongs to the app that launched Python. Claude/Kiro may be denied; the user's own Terminal usually works. Camera runs fail with "not authorized to capture video" otherwise.

@@ -44,7 +44,7 @@ Dashboard protocol: client sends `{"cmd":"hello"|"start"|"cancel"}`. Server send
 Tests live in `tests/` (`test_gestures.py`, `test_bridge.py`, `test_screening.py`, helper `synthetic.py`).
 
 ## Brain Explorer (`handui/brain/`)
-This folder is `frontend/` inside `finalized/`, next to `backend/adhd` and `backend/parkinsons` (FastAPI model servers) and `run.py`, which starts all three. Workflow: 1 choose a held-out patient from a dropdown (the test split only, served by each backend's `/heldout-samples`) -> 2 explore on a transparent brain (ADHD: regions lit by channel amplitude; Parkinson's: voice data, speech areas lit as a labelled reference) -> 3 Analyze, which calls the backend's `/analyze` (the addresses arrive in the init message as `apis`).
+This is the `frontend/` folder at the repo root, next to `backend/adhd` and `backend/parkinsons` (FastAPI model servers) and `run.py`, which starts all three. Workflow: 1 choose a held-out patient from a dropdown (the test split only, served by each backend's `/heldout-samples`) -> 2 explore on a transparent brain (ADHD: regions lit by channel amplitude; Parkinson's: voice data, speech areas lit as a labelled reference) -> 3 Analyze, which calls the backend's `/analyze` (the addresses arrive in the init message as `apis`).
 | File | Role |
 | --- | --- |
 | `eeg.py` | `CHANNELS`, `EEGENIUS_ORDER`, `electrode_position` (BESA spherical -> unit vector, x right ear, y nose, z up), `montage()`, `canonical()` channel names, `parse_text`/`load`/`from_mapping` (CSV or JSON; each row is one input), `summarise` (raw samples -> RMS). |

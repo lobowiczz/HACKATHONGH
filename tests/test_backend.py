@@ -1,6 +1,6 @@
 """Backend tests: held-out lists, the new /analyze endpoints, and that nothing seen in training leaks in.
 
-Run from finalized/:  .venv/bin/python -m unittest discover -s tests
+Run from the repo root:  .venv/bin/python -m unittest discover -s tests
 """
 import importlib.util
 import json

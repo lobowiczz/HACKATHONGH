@@ -36,12 +36,15 @@ flowchart LR
 
 ## Quick start
 
+From the repo root:
+
 ```bash
-cd finalized
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # once
 .venv/bin/python run.py                                                # camera; opens http://127.0.0.1:8765/
 .venv/bin/python run.py --no-camera                                    # mouse and keyboard only
 ```
+
+On Windows, use `.venv\Scripts\python.exe` in place of `.venv/bin/python`.
 
 `run.py` does the following:
 1. Starts the ADHD model server (port 8011) and the Parkinson's model server (port 8012).

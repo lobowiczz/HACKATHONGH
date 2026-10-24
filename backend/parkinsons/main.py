@@ -182,7 +182,7 @@ def read_root():
 
 
 # --- HELD-OUT PATIENTS + FULL ANALYSIS (used by the Brain Explorer) ---
-# Written by finalized/tools/build_heldout.py from the TEST people in the model cards (same split for both models).
+# Written by tools/build_heldout.py from the TEST people in the model cards (same split for both models).
 with open(os.path.join(HERE, "parkinsons_heldout_samples.json")) as f:
     heldout = json.load(f)
 with open(os.path.join(HERE, "parkinsons_heldout_full.json")) as f:

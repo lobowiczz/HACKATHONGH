@@ -103,7 +103,7 @@ def read_root():
 
 
 # --- 3. HELD-OUT PATIENTS + FULL ANALYSIS (used by the Brain Explorer) ---
-# adhd_heldout_samples.json is written by finalized/tools/build_heldout.py: every 2-second window
+# adhd_heldout_samples.json is written by tools/build_heldout.py: every 2-second window
 # from the children in the TEST split of adhd_model_card.json.
 with open(os.path.join(HERE, "adhd_heldout_samples.json")) as f:
     heldout = json.load(f)
