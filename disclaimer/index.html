@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EEGenius | DISCLAIMER</title>
+    
+    <!-- FONTS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <!-- TAILWIND -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- THREE.JS & GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-purple: #ff003c;
+            --neon-yellow: #fcee0a;
+            --deep-bg: #050505;
+            --sys-font: 'Orbitron', sans-serif;
+            --data-font: 'Share Tech Mono', monospace;
+        }
+
+        html, body {
+            background-color: var(--deep-bg);
+            color: white;
+            overflow-x: hidden;
+            width: 100%;
+            max-width: 100%;
+            position: relative;
+            touch-action: pan-y;
+            cursor: none;
+            /* Scrollbar */
+            scrollbar-width: thin;
+            scrollbar-color: var(--neon-cyan) #020010;
+        }
+
+        /* --- SCROLLBAR --- */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #020010; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--neon-cyan); }
+
+        /* --- CUSTOM CURSOR --- */
+        .cursor-dot, .cursor-outline {
+            position: fixed;
+            top: 0; left: 0;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            z-index: 9999;
+            pointer-events: none;
+        }
+        .cursor-dot {
+            width: 6px; height: 6px;
+            background-color: var(--neon-cyan);
+        }
+        .cursor-outline {
+            width: 40px; height: 40px;
+            border: 2px solid var(--neon-cyan);
+            transition: width 0.2s, height 0.2s, background-color 0.2s;
+            box-shadow: 2px 2px 0px var(--neon-purple);
+        }
+
+        /* --- COMIC HALFTONE OVERLAY --- */
+        .comic-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 15px 15px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        #webgl-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: 0;
+            opacity: 1.0; /* Full visibility for background */
+        }
+
+        /* --- INTRO SLIDER --- */
+        #intro-slider {
+            position: fixed;
+            top: 0; right: 0;
+            width: 100%; height: 100%;
+            background: black;
+            z-index: 1000;
+            transform: translateX(100%); /* Start off-screen right */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-left: 5px solid var(--neon-cyan);
+            overflow: hidden;
+            box-shadow: -20px 0 50px rgba(0, 243, 255, 0.2);
+        }
+        
+        /* Mobile Optimization for Slider */
+        @media (max-width: 768px) {
+            #intro-slider {
+                width: 90%; /* Don't cover full width */
+                right: 0;
+            }
+        }
+
+        .intro-bg-detail {
+            position: absolute;
+            inset: 0;
+            background-image: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 20px,
+                rgba(0, 243, 255, 0.05) 20px,
+                rgba(0, 243, 255, 0.05) 40px
+            );
+        }
+        
+        /* --- TEXT STYLES --- */
+        .font-sys { font-family: var(--sys-font); }
+        .font-tech { font-family: var(--data-font); }
+
+        .glitch {
+            position: relative;
+            color: white;
+        }
+        .glitch::before, .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: black;
+        }
+        .glitch::before {
+            left: 2px; text-shadow: -2px 0 var(--neon-purple);
+            clip: rect(24px, 550px, 90px, 0);
+            animation: glitch-anim-2 3s infinite linear alternate-reverse;
+        }
+        .glitch::after {
+            left: -2px; text-shadow: -2px 0 var(--neon-cyan);
+            clip: rect(85px, 550px, 140px, 0);
+            animation: glitch-anim 2.5s infinite linear alternate-reverse;
+        }
+
+        @keyframes glitch-anim {
+            0% { clip: rect(10px, 9999px, 31px, 0); transform: skew(0.5deg); }
+            20% { clip: rect(70px, 9999px, 90px, 0); transform: skew(-0.5deg); }
+            40% { clip: rect(20px, 9999px, 60px, 0); transform: skew(0.1deg); }
+            60% { clip: rect(80px, 9999px, 100px, 0); transform: skew(-0.1deg); }
+            80% { clip: rect(10px, 9999px, 40px, 0); transform: skew(0.5deg); }
+            100% { clip: rect(60px, 9999px, 80px, 0); transform: skew(0); }
+        }
+        @keyframes glitch-anim-2 {
+            0% { clip: rect(60px, 9999px, 90px, 0); }
+            20% { clip: rect(10px, 9999px, 50px, 0); }
+            40% { clip: rect(80px, 9999px, 120px, 0); }
+            60% { clip: rect(30px, 9999px, 40px, 0); }
+            80% { clip: rect(90px, 9999px, 110px, 0); }
+            100% { clip: rect(10px, 9999px, 30px, 0); }
+        }
+
+        /* --- TITLE BACKGROUND BLOBS --- */
+        .title-zone {
+            position: relative;
+            display: inline-block;
+        }
+        .title-zone::before {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120%; height: 150%;
+            background: radial-gradient(circle, rgba(188,19,254,0.4) 0%, rgba(0,0,0,0) 70%);
+            z-index: -1;
+            filter: blur(40px);
+            mix-blend-mode: screen;
+        }
+        .title-zone::after {
+            content: '';
+            position: absolute;
+            top: 40%; left: 60%;
+            transform: translate(-50%, -50%);
+            width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(0,243,255,0.3) 0%, rgba(0,0,0,0) 60%);
+            z-index: -1;
+            filter: blur(30px);
+            mix-blend-mode: screen;
+        }
+
+        .multiverse-border {
+            border: 1px solid transparent;
+            border-image: linear-gradient(to right, var(--neon-purple), var(--neon-cyan)) 1;
+            box-shadow: 0 0 20px rgba(188, 19, 254, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- CURSOR -->
+    <div class="cursor-dot"></div>
+    <div class="cursor-outline"></div>
+
+    <!-- COMIC OVERLAY -->
+    <div class="comic-overlay"></div>
+
+    <!-- INTRO SLIDER -->
+    <div id="intro-slider">
+        <div class="intro-bg-detail"></div>
+        <div class="relative z-10">
+            <h1 class="intro-text font-sys text-4xl md:text-9xl font-black text-white tracking-widest glitch" data-text="DISCLAIMER">DISCLAIMER</h1>
+            <div class="h-1 w-full bg-cyan-500 mt-4 shadow-[0_0_20px_cyan]"></div>
+            <div class="font-tech text-right text-cyan-400 mt-2">LOADING PROTOCOLS...</div>
+        </div>
+    </div>
+
+    <!-- WEBGL BACKGROUND -->
+    <canvas id="webgl-container"></canvas>
+
+    <!-- MAIN CONTENT -->
+    <main class="relative z-10 min-h-screen flex flex-col opacity-0" id="main-content">
+        
+        <!-- HEADER REMOVED AS REQUESTED -->
+
+        <!-- TOP HALF: MULTIVERSE SKY -->
+        <section class="relative h-[60vh] w-full flex flex-col items-center justify-center overflow-hidden pointer-events-none">
+            <!-- Visual Divider Line Behind Title -->
+            <div class="absolute top-1/2 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-purple-600 to-yellow-400 z-0 shadow-[0_0_50px_rgba(255,255,255,0.8)] transform -translate-y-1/2"></div>
+            
+            <div class="title-zone relative z-10 text-center">
+                <h1 class="font-sys text-6xl md:text-[10rem] font-black text-transparent bg-clip-text bg-white stroke-text glitch leading-none" data-text="DISCLAIMER">
+                    DISCLAIMER
+                </h1>
+                <!-- Floating bits around title -->
+                <div class="absolute -top-20 -left-20 w-40 h-40 border-4 border-cyan-400 opacity-30 animate-spin-slow"></div>
+                <div class="absolute -bottom-20 -right-20 w-40 h-40 border-4 border-purple-500 opacity-30 animate-spin-reverse"></div>
+            </div>
+        </section>
+
+        <style>
+            .stroke-text {
+                -webkit-text-stroke: 2px white;
+                /* Slightly see-through to let chaos show */
+                background: rgba(0,0,0,0.2); 
+            }
+            @keyframes spin-reverse {
+                from { transform: rotate(360deg); }
+                to { transform: rotate(0deg); }
+            }
+            .animate-spin-slow { animation: spin-slow 20s linear infinite; }
+            .animate-spin-reverse { animation: spin-reverse 25s linear infinite; }
+        </style>
+
+        <!-- BOTTOM HALF: CONTENT (Transparent Background) -->
+        <section class="bg-transparent w-full flex-grow py-20 px-6 relative z-20 border-t border-gray-800/50">
+            <!-- Glow from the top edge -->
+            <div class="absolute top-0 left-0 w-full h-20 bg-gradient-to-b from-purple-900/20 to-transparent pointer-events-none"></div>
+
+            <!-- CONTENT BOX -->
+            <div class="max-w-4xl mx-auto w-full bg-black/80 backdrop-blur-md border border-gray-700 p-8 md:p-16 relative multiverse-border shadow-2xl">
+                
+                <!-- Decorative Elements -->
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent"></div>
+                
+                <div class="space-y-12 text-left">
+                    <div class="text-block">
+                        <h3 class="font-sys text-xl text-purple-400 mb-4 flex items-center gap-3">
+                            <span class="w-3 h-3 bg-purple-400 rotate-45 shadow-[0_0_10px_purple]"></span> 
+                            DIMENSIONAL ALIGNMENT ERROR
+                        </h3>
+                        <p class="font-tech text-gray-300 text-lg leading-relaxed border-l-4 border-purple-900/50 pl-6">
+                            You have arrived at this node. Statistically, you shouldn't be here. By reading this text, you acknowledge that your current reality may be a simulation running on a server with insufficient RAM. EEGenius utilizes advanced neural networks to analyze brainwaves, but please be advised that our algorithms were trained on data from Earth-616. Results in your current dimension may vary.
+                        </p>
+                    </div>
+
+                    <div class="text-block">
+                        <h3 class="font-sys text-xl text-red-500 mb-4 flex items-center gap-3">
+                            <span class="w-3 h-3 bg-red-500 rotate-45 shadow-[0_0_10px_red]"></span> 
+                            NOT MEDICAL ADVICE - CRITICAL WARNING
+                        </h3>
+                        <p class="font-tech text-gray-200 text-lg leading-relaxed border-l-4 border-red-600 pl-6 font-bold bg-red-900/10 p-4">
+                            This website and the EEGenius AI models are for <span class="text-white">DEMONSTRATION AND EDUCATIONAL PURPOSES ONLY</span>. The predictions provided are <span class="text-red-400">NOT MEDICAL DIAGNOSES</span> and CANNOT be used as a substitute for professional medical advice, diagnosis, or treatment. This system has NOT been evaluated or cleared by the FDA or any medical regulatory body. Do not rely on this tool for health decisions. Always consult a qualified healthcare provider or neurologist for any medical concerns.
+                        </p>
+                    </div>
+
+                    <div class="text-block">
+                        <h3 class="font-sys text-xl text-yellow-400 mb-4 flex items-center gap-3">
+                            <span class="w-3 h-3 bg-yellow-400 rotate-45 shadow-[0_0_10px_yellow]"></span> 
+                            MESSAGE FROM THE ARCHITECT
+                        </h3>
+                        <p class="font-tech text-gray-300 text-lg leading-relaxed border-l-4 border-yellow-900/50 pl-6 italic">
+                            "We built this system to see the invisible. But sometimes, when you stare into the void of raw neural data, the void processes you back. Don't take the glitches personally; they're just the universe rendering."
+                            <br>
+                            <span class="text-white font-bold not-italic mt-4 block text-right">— Adolf, Co-Founder & Lead Architect</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-16 text-center">
+                    <a href="/" class="group relative inline-flex items-center justify-center px-12 py-4 overflow-hidden font-sys font-bold text-black bg-white hover:bg-cyan-400 transition-all duration-200 skew-x-[-10deg]">
+                        <span class="absolute inset-0 w-full h-full bg-cyan-400 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></span>
+                        <span class="relative group-hover:text-black skew-x-[10deg]">ACKNOWLEDGE & RETURN</span>
+                    </a>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="py-12 border-t border-gray-900 bg-black text-center relative overflow-hidden">
+            <div class="font-sys font-bold text-2xl text-gray-800 tracking-[1rem] select-none pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-50">EEGENIUS</div>
+            <div class="relative z-10">
+                <p class="font-tech text-gray-500 text-sm">COPYRIGHT &copy; 2025</p>
+                <div class="flex justify-center gap-4 mt-4">
+                    <a href="https://www.linkedin.com/in/adolf-lobowicz-497a6b372?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" target="_blank" class="text-gray-600 hover:text-cyan-400 transition-colors font-tech text-xs">ADOLF</a>
+                    <a href="https://www.linkedin.com/in/akriti-srivastava-575724321?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" target="_blank" class="text-gray-600 hover:text-purple-400 transition-colors font-tech text-xs">AKRITI</a>
+                </div>
+            </div>
+        </footer>
+
+    </main>
+
+    <!-- SCRIPT -->
+    <script>
+        // Cursor Logic
+        const cursorDot = document.querySelector('.cursor-dot');
+        const cursorOutline = document.querySelector('.cursor-outline');
+        
+        if (window.matchMedia("(hover: hover)").matches) {
+            window.addEventListener('mousemove', (e) => {
+                cursorDot.style.left = `${e.clientX}px`;
+                cursorDot.style.top = `${e.clientY}px`;
+                cursorOutline.animate({
+                    left: `${e.clientX}px`,
+                    top: `${e.clientY}px`
+                }, { duration: 500, fill: "forwards" });
+            });
+        }
+
+        // --- GSAP ANIMATION SEQUENCE ---
+        window.addEventListener('load', () => {
+            const tl = gsap.timeline();
+
+            // 1. Slider Enters from Right
+            tl.to("#intro-slider", {
+                x: "0%",
+                duration: 0.8,
+                ease: "power4.inOut"
+            })
+            // 2. Text Glitch & Scale ("Jumps out")
+            .to(".intro-text", {
+                scale: 1.2,
+                textShadow: "5px 5px 0px #ff003c",
+                duration: 0.1,
+                repeat: 3,
+                yoyo: true,
+                ease: "rough"
+            })
+            // 3. Slider Exits to Left (Creating the "Pass through" effect)
+            .to("#intro-slider", {
+                x: "-150%",
+                duration: 0.6,
+                ease: "power2.in",
+                delay: 0.5,
+                onComplete: () => gsap.set("#intro-slider", { display: "none" })
+            })
+            // 4. Reveal Main Content
+            .to("#main-content", {
+                opacity: 1,
+                duration: 0.1
+            }, "-=0.3")
+            .from(".title-zone", {
+                scale: 0.5,
+                opacity: 0,
+                filter: "blur(20px)",
+                duration: 0.8,
+                ease: "back.out(1.7)"
+            })
+            .from(".text-block", {
+                y: 50,
+                opacity: 0,
+                stagger: 0.2,
+                duration: 0.5
+            }, "-=0.5");
+        });
+
+        // --- THREE.JS BACKGROUND (Spider-Verse Explosion) ---
+        const canvas = document.getElementById('webgl-container');
+        const scene = new THREE.Scene();
+        // scene.fog = new THREE.FogExp2(0x050505, 0.02);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        camera.position.z = 30;
+
+        const group = new THREE.Group();
+        scene.add(group);
+
+        // --- 1. SHARDS (Floating Geometry) ---
+        const shards = [];
+        const geometryTetra = new THREE.TetrahedronGeometry(1);
+        const geometryBox = new THREE.BoxGeometry(1, 1, 1);
+        const geometryOct = new THREE.OctahedronGeometry(1);
+        
+        const colors = [0x00f3ff, 0xbc13fe, 0xfcee0a, 0xff003c]; // Cyan, Purple, Yellow, Red
+
+        for (let i = 0; i < 150; i++) {
+            let geo;
+            const r = Math.random();
+            if (r < 0.33) geo = geometryTetra;
+            else if (r < 0.66) geo = geometryBox;
+            else geo = geometryOct;
+
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const material = new THREE.MeshBasicMaterial({ 
+                color: color, 
+                wireframe: Math.random() > 0.5, 
+                transparent: true, 
+                opacity: Math.random() * 0.6 + 0.2
+            });
+
+            const mesh = new THREE.Mesh(geo, material);
+            
+            // Spread mostly in top half (Y > 0) but chaotic
+            mesh.position.x = (Math.random() - 0.5) * 80;
+            mesh.position.y = Math.random() * 40 - 5; // Mostly top
+            mesh.position.z = (Math.random() - 0.5) * 60;
+            
+            const scale = Math.random() * 2;
+            mesh.scale.set(scale, scale, scale);
+
+            group.add(mesh);
+            shards.push({
+                mesh: mesh,
+                vel: new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.1, 
+                    (Math.random() - 0.5) * 0.1, 
+                    (Math.random() - 0.5) * 0.1
+                ),
+                rot: new THREE.Vector3(
+                    Math.random() * 0.05,
+                    Math.random() * 0.05,
+                    Math.random() * 0.05
+                )
+            });
+        }
+
+        // --- 2. EXPLOSION PARTICLES (Sparks) ---
+        const particlesGeo = new THREE.BufferGeometry();
+        const particleCount = 1000;
+        const posArray = new Float32Array(particleCount * 3);
+        const colorArray = new Float32Array(particleCount * 3);
+        
+        for(let i = 0; i < particleCount * 3; i+=3) {
+            posArray[i] = (Math.random() - 0.5) * 100;     // x
+            posArray[i+1] = Math.random() * 60 - 10;      // y (top bias)
+            posArray[i+2] = (Math.random() - 0.5) * 60;   // z
+            
+            // Random Glitch Colors
+            const c = new THREE.Color(colors[Math.floor(Math.random() * colors.length)]);
+            colorArray[i] = c.r;
+            colorArray[i+1] = c.g;
+            colorArray[i+2] = c.b;
+        }
+        
+        particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        particlesGeo.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
+
+        const particleMaterial = new THREE.PointsMaterial({
+            size: 0.2,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.8
+        });
+
+        const particles = new THREE.Points(particlesGeo, particleMaterial);
+        group.add(particles);
+
+        // --- 3. ANIMATION LOOP ---
+        let time = 0;
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.01;
+
+            // Shard Motion
+            shards.forEach(s => {
+                s.mesh.position.add(s.vel);
+                s.mesh.rotation.x += s.rot.x;
+                s.mesh.rotation.y += s.rot.y;
+
+                // Glitch Twitch
+                if (Math.random() > 0.99) {
+                    s.mesh.position.x += (Math.random() - 0.5) * 2;
+                    s.mesh.scale.setScalar(Math.random() * 3);
+                } else {
+                    // Restore scale slowly
+                    // s.mesh.scale.lerp(new THREE.Vector3(1,1,1), 0.1);
+                }
+
+                // Wrap
+                if (Math.abs(s.mesh.position.x) > 50) s.mesh.position.x *= -0.9;
+                if (Math.abs(s.mesh.position.y) > 40) s.mesh.position.y *= -0.9;
+            });
+
+            // Particles Wiggle
+            particles.rotation.y = time * 0.1;
+            particles.rotation.z = time * 0.05;
+
+            // Group Camera Glitch (Spider-Verse low framerate feel)
+            // We'll maintain smooth cam but jerk the group sometimes
+            if (Math.random() > 0.98) {
+                group.position.x = (Math.random() - 0.5) * 0.5;
+                group.position.y = (Math.random() - 0.5) * 0.5;
+            } else {
+                group.position.x = 0;
+                group.position.y = 0;
+            }
+
+            // Camera Sway
+            camera.position.x = Math.sin(time * 0.5) * 2;
+            camera.position.y = Math.cos(time * 0.3) * 2;
+            camera.lookAt(0, 5, 0); // Look up slightly
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

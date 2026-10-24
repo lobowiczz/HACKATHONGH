@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>11 Best Websites for IGCSE Revision 2026</title>
+    <meta name="description" content="Ace IGCSE exams with these 11 top websites for revision, notes, and past papers. Essential resources for international education success.">
+    <meta name="keywords" content="IGCSE, IB, international curriculum, education, study tips, exam preparation, tutoring, online learning, Singapore education, academic success, websites, help, your, igcse, exams">
+    <meta name="author" content="EEGenius Team">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://eegenius.co/article/"/>
+    
+    
+    <link rel="icon" type="image/png" href="/favicon1/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon1/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon1/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon1/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="EEGenius" />
+    <link rel="manifest" href="/favicon1/site.webmanifest" />
+    
+    <!-- FONTS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <!-- TAILWIND -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-purple: #ff003c;
+            --neon-yellow: #fcee0a;
+            --deep-bg: #050505;
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --sys-font: 'Orbitron', sans-serif;
+            --data-font: 'Share Tech Mono', monospace;
+            --body-font: 'Rajdhani', sans-serif;
+        }
+
+        body {
+            background-color: var(--deep-bg);
+            color: white;
+            overflow-x: hidden;
+            width: 100%;
+            font-family: var(--body-font);
+        }
+
+        /* --- BACKGROUND SHARDS --- */
+        .shard-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; overflow: hidden; }
+        .shard { position: absolute; background: var(--deep-bg); border: 2px solid; }
+        .shard-cyan { background: rgba(0, 243, 255, 0.05); border-color: var(--neon-cyan); box-shadow: 0 0 30px rgba(0, 243, 255, 0.1); }
+        .shard-purple { background: rgba(255, 0, 60, 0.05); border-color: var(--neon-purple); box-shadow: 0 0 30px rgba(255, 0, 60, 0.1); }
+
+        @keyframes float-shard-1 { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 50% { transform: translate(20px, -30px) rotate(10deg); } }
+        @keyframes float-shard-2 { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 50% { transform: translate(-20px, 20px) rotate(-10deg); } }
+
+        /* --- GLITCH TITLES --- */
+        .glitch { position: relative; color: white; font-family: var(--sys-font); }
+        .glitch::before, .glitch::after { content: attr(data-text); position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--deep-bg); }
+        .glitch::before { left: 2px; text-shadow: -2px 0 var(--neon-purple); clip: rect(24px, 550px, 90px, 0); animation: glitch-anim-2 3s infinite linear alternate-reverse; }
+        .glitch::after { left: -2px; text-shadow: -2px 0 var(--neon-cyan); clip: rect(85px, 550px, 140px, 0); animation: glitch-anim 2.5s infinite linear alternate-reverse; }
+        
+        @keyframes glitch-anim { 0% { clip: rect(10px, 9999px, 31px, 0); transform: skew(0.5deg); } 100% { clip: rect(60px, 9999px, 80px, 0); transform: skew(0); } }
+        @keyframes glitch-anim-2 { 0% { clip: rect(60px, 9999px, 90px, 0); } 100% { clip: rect(10px, 9999px, 30px, 0); } }
+
+        /* --- THE SYSTEM BOX (CARD STYLE) --- */
+        .sys-box {
+            background: rgba(5, 10, 20, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        /* The Corner Brackets */
+        .sys-box::before, .sys-box::after { content: ''; position: absolute; width: 10px; height: 10px; transition: all 0.3s ease; }
+        .sys-box::before { top: -1px; left: -1px; border-top: 2px solid var(--neon-cyan); border-left: 2px solid var(--neon-cyan); }
+        .sys-box::after { bottom: -1px; right: -1px; border-bottom: 2px solid var(--neon-purple); border-right: 2px solid var(--neon-purple); }
+        
+        .sys-box:hover { 
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.1); 
+            border-color: var(--neon-cyan); 
+            background: rgba(5, 10, 20, 0.8);
+        }
+
+        /* SCANLINES */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+            background-size: 100% 4px;
+            opacity: 0.2;
+        }
+
+        /* UTILS */
+        .font-tech { font-family: var(--data-font); }
+        .font-sys { font-family: var(--sys-font); }
+        .text-neon-cyan { color: var(--neon-cyan); }
+        .text-neon-purple { color: var(--neon-purple); }
+        .text-neon-yellow { color: var(--neon-yellow); }
+    </style>
+</head>
+<body class="selection:bg-cyan-500 selection:text-black">
+
+    <!-- OVERLAYS -->
+    <div class="scanlines"></div>
+    <div class="shard-layer">
+        <div class="shard shard-cyan" style="top: 10%; right: -5%; width: 40vw; height: 40vh; clip-path: polygon(0 0, 100% 0, 80% 100%, 20% 80%); animation: float-shard-1 10s infinite ease-in-out;"></div>
+        <div class="shard shard-purple" style="bottom: 15%; left: -10%; width: 30vw; height: 50vh; clip-path: polygon(20% 0, 100% 20%, 80% 100%, 0 80%); animation: float-shard-2 15s infinite ease-in-out;"></div>
+    </div>
+
+    <!-- NAVIGATION -->
+    <nav class="fixed top-0 left-0 w-full z-50 px-6 py-4 flex justify-between items-center bg-black/90 border-b border-gray-800 backdrop-blur-md">
+        <div class="flex items-center gap-2">
+            <div class="w-2 h-2 bg-neon-cyan rounded-full animate-pulse"></div>
+            <span class="font-tech text-white tracking-widest text-sm">IGCSE.RESOURCES</span>
+        </div>
+        <div class="hidden md:block font-tech text-xs text-gray-500">UPDATED: 2025</div>
+    </nav>
+
+    <!-- TITLE HEADER -->
+    <header class="pt-32 pb-12 text-center px-4 relative z-10">
+        <h1 class="text-4xl md:text-7xl font-black mb-4 glitch uppercase" data-text="11 TOP WEBSITES">11 TOP WEBSITES</h1>
+        <p class="font-tech text-neon-cyan text-lg tracking-widest mb-2">FOR IGCSE REVISION RESOURCES</p>
+        <p class="text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed">
+            There are a vast number of online resources available for students now thanks to the internet. We are here to share with our students 11 useful websites for IGCSE notes and resources for revision and examination preparation.
+        </p>
+    </header>
+
+    <!-- MAIN CONTENT LIST -->
+    <main class="max-w-5xl mx-auto px-6 pb-32 relative z-10 flex flex-col gap-16">
+
+        <!-- 1. EXAMVOID -->
+        <article class="sys-box p-8 md:p-12">
+            <div class="absolute -top-3 left-8 bg-black px-2 font-tech text-neon-cyan text-xs border border-neon-cyan">#01 HIGHLY RECOMMENDED</div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-800 pb-6">
+                <h2 class="text-4xl md:text-5xl font-sys font-bold text-white">Examvoid</h2>
+                <a href="https://examvoid.com/" class="mt-4 md:mt-0 font-sys text-sm bg-neon-cyan text-black px-6 py-2 font-bold hover:bg-white transition-colors skew-x-[-10deg]">
+                    <span class="block skew-x-[10deg]">VISIT WEBSITE ></span>
+                </a>
+            </div>
+
+            <p class="text-xl text-gray-300 mb-8 font-light">
+                Examvoid is a comprehensive platform designed to streamline your revision process. It replaces the need for multiple open tabs by integrating everything you need into one view.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <a href='https://examvoid.com/tools/past-questions/'><div class="bg-gray-900/50 p-4 border-l-2 border-neon-cyan">
+                    <h3 class="font-sys text-white text-lg mb-2">The Simultaneous Interface</h3>
+                    <p class="text-gray-400 text-sm">Students view the Question Paper, Mark Scheme, Examiner Report, and Grade Thresholds all on one screen. This is a game changer for efficiency.</p>
+                </div></a>
+                <a href='https://examvoid.com/tools/examiner-analysis/'><div class="bg-gray-900/50 p-4 border-l-2 border-neon-cyan">
+                    <h3 class="font-sys text-white text-lg mb-2">Deep Examiner Analysis</h3>
+                    <p class="text-gray-400 text-sm">We analyze official reports to explain why students lose marks on specific questions. This acts as a digital tutor for students who might not have 24/7 access to a real one.</p>
+                </div></a>
+                <a href='https://examvoid.com/tools/topicals/'><div class="bg-gray-900/50 p-4 border-l-2 border-neon-cyan">
+                    <h3 class="font-sys text-white text-lg mb-2">100,000+ Topical Questions</h3>
+                    <p class="text-gray-400 text-sm">Students can filter specifically for their weak areas like Vectors or Mole Calculations.</p>
+                </div></a>
+                <a href='https://examvoid.com/tools/zen/'><div class="bg-gray-900/50 p-4 border-l-2 border-neon-cyan">
+                    <h3 class="font-sys text-white text-lg mb-2">Paper Tracker & Zen Mode</h3>
+                    <p class="text-gray-400 text-sm">We track every paper solved to monitor progress, all within a distraction-free environment to keep students focused.</p>
+                </div></a>
+            </div>
+
+            <div class="font-tech text-sm text-neon-purple">
+                <a href="https://examvoid.com/" class="hover:underline">Access 40,000+ past papers on Examvoid &rarr;</a>
+            </div>
+        </article>
+
+        <!-- 2. THE IGCSE CHANNEL -->
+        <article class="sys-box p-8 md:p-12">
+            <div class="absolute -top-3 left-8 bg-black px-2 font-tech text-gray-500 text-xs border border-gray-700">#02 YOUTUBE RESOURCE</div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-800 pb-6">
+                <h2 class="text-3xl md:text-4xl font-sys font-bold text-white">The IGCSE Channel</h2>
+            </div>
+
+            <p class="text-lg text-gray-300 mb-6 font-light">
+                The IGCSE Channel goes through IGCSE past year papers and helps students to get the model A* answers examiners are looking for. The host gives detailed solutions corresponding to the mark scheme. Additionally, she focuses on the three sciences of IGCSE - Biology, Chemistry, and Physics.
+            </p>
+        </article>
+
+        <!-- 3. CRASHCOURSE -->
+        <article class="sys-box p-8 md:p-12">
+            <div class="absolute -top-3 left-8 bg-black px-2 font-tech text-gray-500 text-xs border border-gray-700">#03 YOUTUBE RESOURCE</div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-800 pb-6">
+                <h2 class="text-3xl md:text-4xl font-sys font-bold text-white">CrashCourse</h2>
+            </div>
+
+            <p class="text-lg text-gray-300 mb-6 font-light">
+                Formed by two brothers who wanted to make education easily accessible to everyone. The Crash Course team has produced more than 32 courses on a wide variety of subjects, including organic chemistry, literature, world history, biology, philosophy, theater, ecology, and many more! Their videos are concept-based and excellent for introductions or revision.
+            </p>
+        </article>
+
+        <!-- 4. MICHEL VAN BIEZEN -->
+        <article class="sys-box p-8 md:p-12">
+            <div class="absolute -top-3 left-8 bg-black px-2 font-tech text-gray-500 text-xs border border-gray-700">#04 YOUTUBE RESOURCE</div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-800 pb-6">
+                <h2 class="text-3xl md:text-4xl font-sys font-bold text-white">Michel van Biezen</h2>
+            </div>
+
+            <p class="text-lg text-gray-300 mb-6 font-light">
+                Michel van Biezen is a channel hosted by a professor containing a variety of subject videos which include Physics, Chemistry, Astronomy, Math, and Mechanical Engineering. His videos explain fundamental concepts as well as examples to solve questions and problems step-by-step.
+            </p>
+        </article>
+
+        <!-- 5. IGCSE PRO -->
+        <article class="sys-box p-8 md:p-12">
+            <div class="absolute -top-3 left-8 bg-black px-2 font-tech text-gray-500 text-xs border border-gray-700">#05 REVISION NOTES</div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-800 pb-6">
+                <h2 class="text-3xl md:text-4xl font-sys font-bold text-white">IGCSE Pro</h2>
+            </div>
+
+            <p class="text-lg text-gray-300 mb-6 font-light">
+                IGCSE Pro is a website that offers students resources specifically for IGCSE Biology and ICT. They have complete and comprehensive notes for all the sub-topics under Biology and ICT. A great place to check if you need clarification on specific chapters.
+            </p>
+        </article>
+
+        <!-- 6. STAMP SCIENCE -->
+        <article class="sys-box p-8 md:p-12">
+            <div class="absolute -top-3 left-8 bg-black px-2 font-tech text-gray-500 text-xs border border-gray-700">#06 SCIENCE RESOURCE</div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-800 pb-6">
+                <h2 class="text-3xl md:text-4xl font-sys font-bold text-white">Stamp Science</h2>
+            </div>
+
+            <p class="text-lg text-gray-300 mb-6 font-light">
+                Stamp Science offers notes on the three IGCSE sciences for years 7, 8, and 9 students. Their website breaks down the subjects into sub-topics and includes essential formulas, concepts, and key takeaways. They also use simulations for several topics to better illustrate difficult concepts to students.
+            </p>
+        </article>
+
+        <!-- 7. SCIENCE WITH HAZEL -->
+        <article class="sys-box p-8 md:p-12">
+            <div class="absolute -top-3 left-8 bg-black px-2 font-tech text-gray-500 text-xs border border-gray-700">#07 SCIENCE RESOURCE</div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-800 pb-6">
+                <h2 class="text-3xl md:text-4xl font-sys font-bold text-white">Science with Hazel</h2>
+            </div>
+
+            <p class="text-lg text-gray-300 mb-6 font-light">
+                Science with Hazel is hosted by Hazel, who explains GCSE and IGCSE science topics including the new Grade 1 to 9 syllabus. She answers practice exam papers in all three sciences - Chemistry, Biology, and Physics - to help students walk through their exam revision effectively.
+            </p>
+        </article>
+
+        <!-- 8. NOTES4IGCSE -->
+        <article class="sys-box p-8 md:p-12">
+            <div class="absolute -top-3 left-8 bg-black px-2 font-tech text-gray-500 text-xs border border-gray-700">#08 REVISION NOTES</div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-800 pb-6">
+                <h2 class="text-3xl md:text-4xl font-sys font-bold text-white">Notes4IGCSE</h2>
+            </div>
+
+            <p class="text-lg text-gray-300 mb-6 font-light">
+                Notes4IGCSE mainly provides students with IGCSE Biology and Chemistry Notes. Their notes are detailed and easy to read, covering all sub-topics of the subject in detail. It is great for students who are looking for quick summary notes to refresh their memory.
+            </p>
+        </article>
+
+        <!-- 9. TEACHIFYME -->
+        <article class="sys-box p-8 md:p-12">
+            <div class="absolute -top-3 left-8 bg-black px-2 font-tech text-gray-500 text-xs border border-gray-700">#09 BLOG & NOTES</div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-800 pb-6">
+                <h2 class="text-3xl md:text-4xl font-sys font-bold text-white">TeachifyMe</h2>
+            </div>
+
+            <p class="text-lg text-gray-300 mb-6 font-light">
+                TeachifyMe offers subject notes for the majority of IGCSE subjects. They also provide blog pages that go through example questions. This page is extremely helpful for finding practice materials. Note: To gain access to their full premium notes, payment may be required.
+            </p>
+        </article>
+
+        <!-- 10. OXNOTES -->
+        <article class="sys-box p-8 md:p-12">
+            <div class="absolute -top-3 left-8 bg-black px-2 font-tech text-gray-500 text-xs border border-gray-700">#10 HUMANITIES</div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-800 pb-6">
+                <h2 class="text-3xl md:text-4xl font-sys font-bold text-white">OxNotes</h2>
+            </div>
+
+            <p class="text-lg text-gray-300 mb-6 font-light">
+                OxNotes contains study and revision notes for many GCSE subjects including English Literature, Geography, and History. Their study guides help students go through each concept and chapter, often including recommended YouTube videos. It serves as a complete study guide for students in the humanities.
+            </p>
+        </article>
+
+        <!-- 11. CAMBRIDGE OFFICIAL -->
+        <article class="sys-box p-8 md:p-12">
+            <div class="absolute -top-3 left-8 bg-black px-2 font-tech text-gray-500 text-xs border border-gray-700">#11 OFFICIAL SOURCE</div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-800 pb-6">
+                <h2 class="text-3xl md:text-4xl font-sys font-bold text-white">Cambridge Assessment</h2>
+                <a href="https://www.cambridgeinternational.org/programmes-and-qualifications/cambridge-upper-secondary/cambridge-igcse/" class="mt-4 md:mt-0 font-sys text-sm border border-white text-white px-6 py-2 font-bold hover:bg-white hover:text-black transition-colors skew-x-[-10deg]">
+                    <span class="block skew-x-[10deg]">OFFICIAL SITE ></span>
+                </a>
+            </div>
+
+            <p class="text-lg text-gray-300 mb-6 font-light">
+                The official IGCSE website is undeniably one of the most useful websites for revision. It provides students with past-year examination papers that are available for download. Past year papers are extremely helpful for revision, and the mark schemes provided serve as the ultimate guide to your preparation.
+            </p>
+        </article>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-gray-800 bg-black/80 py-12 text-center">
+        <p class="font-tech text-gray-500 text-sm mb-4">OPTIMIZED FOR IGCSE STUDENTS // 2025</p>
+        <a href='https://eegenius.co/'><div class="font-sys text-2xl font-bold text-white tracking-widest opacity-30">GOOD LUCK</div></a>
+    </footer>
+
+</body>
+</html>
