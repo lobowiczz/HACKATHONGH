@@ -1,0 +1,43 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+*.egg
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# PyTorch / Models (large files — use Git LFS or store externally)
+# Uncomment if you want to track model files:
+# *.pth
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build / Node
+node_modules/
+.cache/
+
+# Logs
+*.log
+
+# Qodo AI
+.qodo/
