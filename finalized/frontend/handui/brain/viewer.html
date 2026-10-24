@@ -1,232 +1,418 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Brain Explorer</title>
 <style>
   :root {
-    --bg: #040714; --surface: rgba(12, 20, 44, .82); --surface-2: rgba(28, 44, 86, .55); --border: rgba(96, 160, 255, .18);
-    --text: #e8f3ff; --muted: #8ea6c9; --accent: #5fd4ff; --accent-2: #2f8cff; --accent-ink: #021026;
-    --warn: #ffc76a; --ok: #6be3a4; --danger: #ff8a7a; --radius: 14px;
+    --font: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Inter, "Segoe UI", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    --ease: cubic-bezier(.2, .7, .2, 1);
+  }
+  :root[data-theme="dark"] {
+    --bg: #2a4d73;
+    --text: #f2f5f8; --muted: rgba(242, 245, 248, .64); --faint: rgba(242, 245, 248, .4);
+    --line: rgba(255, 255, 255, .16); --tint: rgba(255, 255, 255, .07); --panel: rgba(20, 41, 66, .42);
+    --accent: #cbee6e; --accent-ink: #17220a; --mark: #cbee6e; --up: #d6f08d; --down: #a9cdf0; --bad: #ffb4a8;
+    --lbl-bg: rgba(5, 12, 28, .9); --lbl-fg: #cbee6e;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bg: #e6edf4;
+    --text: #14202c; --muted: #5a6876; --faint: #8a96a2;
+    --line: rgba(20, 32, 44, .12); --tint: rgba(20, 32, 44, .04); --panel: rgba(255, 255, 255, .55);
+    --accent: #c6ec5e; --accent-ink: #18240a; --mark: #7da51c; --up: #557f0e; --down: #33689c; --bad: #b3412f;
+    --lbl-bg: rgba(14, 26, 46, .9); --lbl-fg: #d4f27a;
+    color-scheme: light;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
-               font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  button { font: inherit; color: inherit; cursor: pointer; background: var(--surface-2); border: 1px solid var(--border);
-           border-radius: 10px; padding: 7px 12px; }
-  button:hover:not(:disabled) { border-color: var(--accent); }
-  button:disabled { opacity: .45; cursor: default; }
-  button.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-ink);
-                   border: 0; font-weight: 700; }
-  #app { display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: auto minmax(0, 1fr); height: 100vh; }
-  @media (max-width: 860px) { #app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 58vh auto; }
-                              header { padding: 10px 16px; } .steps { flex-wrap: wrap; }
-                              html, body { overflow: auto; } aside { border-left: 0 !important; } }
+  html, body { margin: 0; height: 100%; }
+  body { font: 15px/1.5 var(--font); color: var(--text); background: var(--bg); overflow: hidden;
+         -webkit-font-smoothing: antialiased; letter-spacing: -.005em; transition: background-color .7s var(--ease), color .7s var(--ease); }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  button:focus-visible, [tabindex]:focus-visible, input:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 12px; }
+  h1, h2, h3, h4 { margin: 0; font-weight: 400; letter-spacing: -.03em; }
 
-  header { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; padding: 10px 20px; flex-wrap: wrap;
-           background: rgba(6, 11, 28, .9); border-bottom: 1px solid var(--border); position: relative; z-index: 2; }
-  .logo { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 17px; letter-spacing: .2px; }
-  .logo svg { width: 26px; height: 26px; }
-  .spacer { flex: 1; }
-  .steps { display: flex; gap: 6px; }
-  .steps button { display: flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 999px;
-                  background: transparent; color: var(--muted); }
-  .steps button b { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px;
-                    background: var(--surface-2); color: var(--muted); }
-  .steps button.on { color: var(--text); border-color: var(--accent); }
-  .steps button.on b { background: var(--accent); color: var(--accent-ink); }
-  .steps button.done b { background: rgba(95, 212, 255, .25); color: var(--accent); }
-  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12.5px;
-          background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); white-space: nowrap; }
-  .pill i { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
-  .pill.on i { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
-  .pill.idle i { background: var(--warn); }
+  /* Background gradients cross-fade between themes; the brain page in dark mode deepens to a navy stage. */
+  .bg { position: fixed; inset: 0; z-index: -2; transition: opacity .8s var(--ease); pointer-events: none; }
+  .bg-dark { background: radial-gradient(85vw 75vh at 16% 64%, rgba(178, 203, 228, .34), transparent 62%),
+                         radial-gradient(70vw 60vh at 86% 10%, rgba(20, 42, 70, .5), transparent 62%),
+                         linear-gradient(155deg, #1f4167 0%, #325a82 50%, #5b7fa4 100%); }
+  .bg-light { opacity: 0; background: radial-gradient(85vw 75vh at 16% 64%, rgba(255, 255, 255, .9), transparent 60%),
+                                      radial-gradient(70vw 60vh at 88% 8%, rgba(160, 188, 216, .5), transparent 62%),
+                                      linear-gradient(155deg, #f7f9fb 0%, #e5ecf3 52%, #cbd9e7 100%); }
+  .bg-deep { opacity: 0; background: radial-gradient(ellipse 70% 65% at 50% 48%, #12305c 0%, #0b1a38 48%, #050b1d 92%); }
+  :root[data-theme="light"] .bg-light { opacity: 1; }
+  :root[data-theme="light"] .bg-dark { opacity: 0; }
+  :root[data-theme="dark"] body[data-page="2"] .bg-deep { opacity: 1; }
 
-  #stage { position: relative; min-height: 0; overflow: hidden;
-           background: radial-gradient(ellipse 70% 65% at 50% 46%, #0f2350 0%, #081231 45%, #040714 85%); }
-  #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+  /* ---------------------------------------------------------------- header */
+  .top { position: fixed; top: 0; left: 0; right: 0; height: 76px; display: grid; grid-template-columns: 1fr auto 1fr;
+         align-items: center; padding: 0 clamp(20px, 4vw, 56px); z-index: 20; }
+  .steps { display: flex; gap: clamp(14px, 2.4vw, 30px); }
+  .steps button { color: var(--muted); font-size: 14px; padding: 6px 0; position: relative; transition: color .3s; }
+  .steps button span { font-family: var(--mono); font-size: 11px; margin-right: 6px; opacity: .7; }
+  .steps button.on { color: var(--text); }
+  .steps button.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px; background: var(--mark); }
+  .steps button:disabled { opacity: .45; cursor: default; }
+  .tools { display: flex; align-items: center; gap: 18px; justify-self: end; }
+  .hand { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .hand i { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+  .hand.on i { background: var(--mark); }
+  .theme { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--tint);
+           transition: background .3s; }
+  .theme:hover { background: var(--line); }
+  .theme svg { width: 18px; height: 18px; transition: transform .6s var(--ease); }
+  :root[data-theme="dark"] .sun, :root[data-theme="light"] .moon { display: none; }
+
+  /* ---------------------------------------------------------------- pages */
+  .page { position: fixed; inset: 76px 0 0 0; opacity: 0; visibility: hidden; transform: translateY(14px);
+          transition: opacity .55s var(--ease), transform .7s var(--ease), visibility 0s .55s; }
+  .page.on { opacity: 1; visibility: visible; transform: none; transition: opacity .55s var(--ease), transform .7s var(--ease); }
+  body.loading .page.on { opacity: 0; transform: scale(.985); }
+  .center { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+            padding: 0 24px 76px; }
+  .tag { display: inline-block; font: 500 12px/1.2 var(--font); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+  .display { font-size: clamp(40px, 6.2vw, 78px); line-height: 1.02; letter-spacing: -.045em; margin: 16px 0 14px; }
+  .lede { color: var(--muted); font-size: 16px; max-width: 460px; margin: 0; }
+  .cta { display: inline-flex; align-items: center; gap: 10px; height: 52px; padding: 0 26px; border-radius: 999px;
+         background: var(--accent); color: var(--accent-ink); font-size: 16px; font-weight: 500;
+         transition: transform .25s var(--ease), opacity .4s var(--ease), filter .25s; }
+  .cta:hover { transform: translateY(-1px); filter: brightness(1.04); }
+  .cta:disabled { opacity: .55; cursor: default; transform: none; }
+  .cta svg { width: 16px; height: 16px; }
+  .ghost { display: inline-flex; align-items: center; height: 52px; padding: 0 24px; border-radius: 999px; background: var(--tint);
+           font-size: 16px; transition: background .25s; }
+  .ghost:hover { background: var(--line); }
+  .link { color: var(--muted); font-size: 14px; margin-top: 18px; transition: color .25s; }
+  .link:hover { color: var(--text); }
+  .status { color: var(--muted); font-size: 13px; min-height: 20px; margin: 14px 0 0; }
+
+  /* ---------------------------------------------------------------- page 1: patient picker */
+  #p1 { justify-content: flex-start; padding-top: clamp(40px, 13vh, 130px); overflow-y: auto; }   /* opens downward, heading stays */
+  .picker { width: min(440px, 100%); margin-top: 36px; text-align: left; flex: none; }
+  .picker-trigger { width: 100%; height: 64px; display: flex; align-items: center; gap: 14px; padding: 0 22px 0 24px; text-align: left;
+                    border-radius: 22px; background: var(--panel); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+                    transition: background .3s, border-radius .3s; }
+  .picker.open .picker-trigger { border-radius: 22px 22px 0 0; }
+  .picker-trigger .val { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .picker-trigger .val b { font-weight: 500; font-size: 16px; }
+  .picker-trigger .val small { color: var(--muted); font-size: 13px; }
+  .picker-trigger .ph { color: var(--muted); font-size: 16px; }
+  .picker-trigger svg { width: 18px; height: 18px; color: var(--muted); transition: transform .35s var(--ease); flex: none; }
+  .picker.open .picker-trigger svg { transform: rotate(180deg); }
+  .picker-panel { background: var(--panel); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+                  border-radius: 0 0 22px 22px; padding: 4px 12px 12px; border-top: 1px solid var(--line); }
+  .ptabs { display: flex; gap: 4px; padding: 8px 4px; }
+  .ptabs button { flex: 1; padding: 8px 10px; border-radius: 12px; color: var(--muted); font-size: 13px; text-align: left;
+                  display: flex; justify-content: space-between; transition: background .25s, color .25s; }
+  .ptabs button.on { background: var(--tint); color: var(--text); }
+  .ptabs em { font-style: normal; font-family: var(--mono); font-size: 11px; opacity: .7; }
+  .search { width: 100%; height: 40px; border: 0; border-radius: 12px; padding: 0 14px; margin: 2px 0 8px; font: inherit;
+            font-size: 14px; color: var(--text); background: var(--tint); }
+  .search::placeholder { color: var(--faint); }
+  .search:focus { outline: none; background: var(--line); }
+  /* three options visible at a time; scroll for the rest */
+  .plist { list-style: none; margin: 0; padding: 0; height: 168px; overflow-y: auto; scroll-snap-type: y mandatory;
+           overscroll-behavior: contain; outline: none; scrollbar-width: thin; }
+  .plist li { height: 56px; scroll-snap-align: start; display: flex; align-items: center; justify-content: space-between;
+              gap: 12px; padding: 0 14px; border-radius: 14px; cursor: pointer; transition: background .2s; }
+  .plist li b { font-weight: 500; }
+  .plist li small { color: var(--muted); font-size: 13px; }
+  .plist li.active { background: var(--tint); }
+  .plist li[aria-selected="true"] { background: var(--line); }
+  .plist li.none { color: var(--muted); cursor: default; }
+  .manual-toggle { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; color: var(--muted); font-size: 14px;
+                   transition: color .25s; }
+  .manual-toggle:hover, .manual-toggle[aria-expanded="true"] { color: var(--text); }
+  .manual-toggle svg { width: 14px; height: 14px; transition: transform .35s var(--ease); }
+  .manual-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .manual { width: min(440px, 100%); margin-top: 12px; padding: 14px; border-radius: 22px; background: var(--panel); flex: none;
+            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); text-align: left; animation: rise .45s var(--ease); }
+  .manual p { margin: 0 4px 10px; color: var(--muted); font-size: 13px; }
+  .mgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .mf { display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 10px; border-radius: 11px; background: var(--tint);
+        transition: background .2s, box-shadow .2s; }
+  .mf:focus-within { background: var(--line); }
+  .mf.bad { box-shadow: inset 0 0 0 1px var(--bad); }
+  .mf span { font: 600 11px var(--mono); color: var(--muted); width: 24px; flex: none; }
+  .mf input { width: 100%; min-width: 0; border: 0; background: none; color: var(--text); font: 14px var(--font);
+              text-align: right; outline: none; font-variant-numeric: tabular-nums; }
+  .mf input::placeholder { color: var(--faint); }
+  .manual-foot { display: flex; justify-content: space-between; align-items: center; margin: 10px 4px 0; font-size: 13px; color: var(--muted); }
+  .manual-foot button { color: var(--muted); font-size: 13px; }
+  .manual-foot button:hover { color: var(--text); }
+  .confirm-wrap { min-height: 84px; display: flex; align-items: flex-end; justify-content: center; flex: none; padding-bottom: 4px; }
+  .confirm-wrap .cta { opacity: 0; transform: translateY(8px); pointer-events: none; }
+  .confirm-wrap.show .cta { opacity: 1; transform: none; pointer-events: auto; }
+
+  /* ---------------------------------------------------------------- page 2: brain */
+  #gl { position: fixed; inset: 0; width: 100vw; height: 100vh; opacity: 0; transition: opacity .7s var(--ease);
+        touch-action: none; cursor: grab; z-index: 0; }
   #gl:active { cursor: grabbing; }
-  #labels { position: absolute; inset: 0; pointer-events: none; }
-  .lbl { position: absolute; transform: translate(-50%, calc(-100% - 12px)); white-space: nowrap; font-size: 11px;
-         padding: 2px 7px; border-radius: 999px; color: #d9f2ff; background: rgba(8, 20, 48, .55);
-         border: 1px solid rgba(110, 200, 255, .25); backdrop-filter: blur(3px); transition: opacity .2s; }
-  .lbl b { font-family: ui-monospace, Menlo, monospace; font-weight: 700; }
-  .lbl span { color: var(--muted); margin-left: 5px; }
-  .lbl.strong { border-color: rgba(160, 230, 255, .7); box-shadow: 0 0 12px rgba(95, 212, 255, .35); }
-  .lbl.sel { background: rgba(230, 248, 255, .95); color: #04112b; border-color: #fff; }
-  .lbl.sel span { color: #22406e; }
-  .overlay { position: absolute; background: rgba(8, 16, 40, .72); border: 1px solid var(--border); border-radius: 12px;
-             padding: 8px 12px; font-size: 12px; color: var(--muted); backdrop-filter: blur(6px); }
-  #legend { left: 16px; bottom: 14px; }
-  #legend .row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
-  #legend .dot { border-radius: 50%; background: radial-gradient(circle, #fff 0%, #7fe0ff 35%, rgba(47, 140, 255, 0) 70%); }
-  #zoomGauge { left: 16px; top: 16px; width: 150px; display: none; }
-  #zoomGauge .track { height: 6px; border-radius: 3px; background: rgba(95, 212, 255, .15); margin: 6px 0 2px; position: relative; }
-  #zoomGauge .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px;
-                     background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
-  #zoomGauge .ends { display: flex; justify-content: space-between; font-size: 11px; }
-  #empty { inset: auto 0 22% 0; margin: 0 auto; width: fit-content; max-width: 90%; text-align: center; font-size: 13px; }
+  body[data-page="2"] #gl { opacity: 1; }
+  #labels { position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: 0; transition: opacity .5s; }
+  body[data-page="2"] #labels { opacity: 1; }
+  /* Region labels are lime on a dark pill in both themes, so they never blend into the blue hologram. */
+  .lbl { position: absolute; transform: translate(-50%, calc(-100% - 14px)); white-space: nowrap; display: inline-flex;
+         align-items: baseline; gap: 8px; padding: 6px 13px; border-radius: 999px; background: var(--lbl-bg); color: var(--lbl-fg);
+         border: 1px solid rgba(203, 238, 110, .3); box-shadow: 0 6px 18px rgba(0, 0, 0, .25); transition: opacity .3s; }
+  .lbl b { font: 700 15px/1.2 var(--mono); }
+  .lbl span { font-size: 14px; font-weight: 500; opacity: .85; }
+  .lbl.sel { background: var(--accent); color: var(--accent-ink); }
+  #p2 { pointer-events: none; }
+  #p2 > * { pointer-events: auto; }
+  :root[data-theme="dark"] body[data-page="2"] { --panel: rgba(16, 32, 62, .55); }
+  .p2-head { position: absolute; left: clamp(20px, 4vw, 56px); top: 18px; max-width: 360px; }
+  .p2-head h2 { font-size: clamp(28px, 3.2vw, 40px); letter-spacing: -.035em; margin: 10px 0 4px; }
+  .p2-head p { margin: 0; color: var(--muted); }
+  .region { position: absolute; right: clamp(20px, 4vw, 56px); top: 50%; transform: translateY(-50%); width: 300px;
+            padding: 22px 24px; border-radius: 22px; background: var(--panel); backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px); transition: opacity .4s var(--ease); }
+  .region[hidden] { display: block; opacity: 0; pointer-events: none; }
+  .region h3 { font-size: 24px; letter-spacing: -.03em; margin: 8px 0 2px; }
+  .region .sub { color: var(--muted); font-size: 13px; }
+  .region dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 18px 0 0; font-size: 14px; }
+  .region dt { color: var(--muted); }
+  .region dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  .region p { color: var(--muted); font-size: 13px; margin: 16px 0 0; }
+  .bar { height: 3px; border-radius: 2px; background: var(--line); margin-top: 14px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--mark); border-radius: 2px; transition: width .5s var(--ease); }
+  .p2-foot { position: absolute; left: 0; right: 0; bottom: 30px; display: grid; grid-template-columns: 1fr auto 1fr;
+             align-items: end; padding: 0 clamp(20px, 4vw, 56px); gap: 20px; pointer-events: none; }
+  .p2-foot > * { pointer-events: auto; }
+  .legend { font-size: 13px; color: var(--muted); }
+  .legend .dots { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .legend .dot { border-radius: 50%; background: radial-gradient(circle, #ffffff 0%, #7fd0ff 40%, transparent 72%); }
+  :root[data-theme="light"] .legend .dot { background: radial-gradient(circle, #1257d6 0%, #3d86ff 40%, transparent 72%); }
+  .hints { justify-self: end; text-align: right; font-size: 13px; color: var(--muted); line-height: 1.7; }
+  .hints b { color: var(--text); font-weight: 500; }
 
-  aside { background: rgba(6, 11, 28, .92); border-left: 1px solid var(--border); overflow: auto; padding: 16px 18px;
-          display: grid; gap: 16px; align-content: start; }
-  h2 { margin: 0 0 6px; font-size: 12px; letter-spacing: .9px; text-transform: uppercase; color: var(--accent); font-weight: 700; }
-  h3 { margin: 0 0 6px; font-size: 13px; color: var(--muted); font-weight: 650; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
-  .big { font-size: 28px; font-weight: 750; line-height: 1.1; }
-  .sub { color: var(--muted); }
-  .note { color: var(--muted); font-size: 12.5px; margin: 8px 0 0; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
-  .grow { flex: 1; }
-  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 6px 0 10px; }
-  .seg button { text-align: left; padding: 8px 10px; display: grid; gap: 1px; font-weight: 650; }
-  .seg button span { font-size: 11.5px; font-weight: 400; color: var(--muted); }
-  .seg button.on { border-color: var(--accent); background: rgba(95, 212, 255, .12); }
-  .picker { margin-top: 10px; }
-  .picker-btn { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 12px; }
-  .picker-btn > span { flex: 1; display: grid; }
-  .picker small { color: var(--muted); font-size: 12px; }
-  .picker-btn svg { width: 16px; height: 16px; color: var(--accent); transition: transform .15s; flex: none; }
-  .picker-btn[aria-expanded="true"] svg { transform: rotate(180deg); }
-  .picker-pop { margin-top: 6px; border: 1px solid var(--border); border-radius: 12px; background: rgba(4, 9, 26, .96); padding: 8px; }
-  .picker-pop input { margin-bottom: 6px; }
-  /* exactly three options visible; scroll for the rest */
-  .picker ul { list-style: none; margin: 0; padding: 0; height: 150px; overflow-y: auto; scroll-snap-type: y mandatory;
-               overscroll-behavior: contain; outline: none; }
-  .picker li { height: 50px; padding: 7px 10px; border-radius: 8px; display: grid; align-content: center; cursor: pointer;
-               scroll-snap-align: start; }
-  .picker li.active { background: var(--surface-2); }
-  .picker li[aria-selected="true"] { background: rgba(95, 212, 255, .16); box-shadow: inset 3px 0 0 var(--accent); }
-  .picker li.none { color: var(--muted); cursor: default; }
-  .picker-count { font-size: 11.5px; color: var(--muted); margin-top: 6px; text-align: right; }
-  input[type=search] { font: inherit; color: var(--text); background: rgba(6, 12, 30, .8); border: 1px solid var(--border);
-                       border-radius: 8px; padding: 6px 9px; width: 100%; }
-  input[type=search]:focus { outline: none; border-color: var(--accent); }
-  .vals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px 12px; margin: 4px 0 10px; }
-  .vals.wide { grid-template-columns: 1fr; }
-  .val { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; padding: 2px 0;
-         border-bottom: 1px dashed rgba(96, 160, 255, .12); }
-  .val b { font: 700 12px ui-monospace, Menlo, monospace; color: var(--accent); }
-  .vals.wide .val b { font: 500 12.5px system-ui, -apple-system, sans-serif; color: var(--text); }
-  .val span { font-variant-numeric: tabular-nums; }
-  .prob { margin: 12px 0 6px; }
-  .prob-bar { position: relative; height: 12px; border-radius: 6px; background: rgba(95, 212, 255, .12); }
-  .prob-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
-  .pos .prob-bar i { background: linear-gradient(90deg, #ff8f5a, var(--warn)); }
-  .prob-bar .thr { position: absolute; left: 50%; top: -4px; bottom: -4px; width: 2px; background: #fff; opacity: .75; }
-  .prob-ends { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); margin-top: 5px; }
-  .prob-ends b { color: var(--text); }
-  .truth { margin-top: 10px; padding: 8px 10px; border-radius: 10px; display: grid; gap: 2px; font-size: 13px; }
-  .truth.ok { background: rgba(107, 227, 164, .08); border: 1px solid rgba(107, 227, 164, .35); }
-  .truth.ok > b { color: var(--ok); }
-  .truth.miss { background: rgba(255, 138, 122, .07); border: 1px solid rgba(255, 138, 122, .35); }
-  .truth.miss > b { color: var(--danger); }
-  .drv { width: 100%; display: grid; grid-template-columns: 40px 1fr auto; gap: 8px; align-items: center; text-align: left;
-         padding: 5px 8px; margin-top: 3px; background: transparent; border-color: transparent; }
-  .drv:hover { background: var(--surface-2); border-color: var(--border); }
-  .drv.static { grid-template-columns: 1fr auto; cursor: default; }
-  .drv.static:hover { background: transparent; border-color: transparent; }
-  .drv b { font: 700 12px ui-monospace, Menlo, monospace; color: var(--accent); }
-  .drv small { display: block; color: var(--muted); font-size: 11.5px; }
-  .drv em { font-style: normal; font-variant-numeric: tabular-nums; }
-  .up { color: #ffb38a; }
-  .down { color: #8fd0ff; }
-  ul.info { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 6px; }
-  details { margin-top: 8px; }
-  details summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
-  .kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin-top: 10px; }
-  .kv dt { color: var(--muted); }
-  .kv dd { margin: 0; font-variant-numeric: tabular-nums; }
-  .meter { height: 8px; border-radius: 4px; background: rgba(95, 212, 255, .12); overflow: hidden; margin-top: 4px; }
-  .meter i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent-2), #c9f1ff); }
-  .rank { display: grid; gap: 3px; }
-  .rank button { display: grid; grid-template-columns: 36px 1fr 64px; align-items: center; gap: 8px; text-align: left;
-                 padding: 4px 8px; border-radius: 8px; background: transparent; border: 1px solid transparent; }
-  .rank button:hover, .rank button.sel { background: var(--surface-2); border-color: var(--border); }
-  .rank b { font-family: ui-monospace, Menlo, monospace; color: var(--accent); }
-  .rank .meter { margin: 0; }
-  .rank span:last-child { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12.5px; }
-  pre { margin: 8px 0 0; padding: 10px; border-radius: 10px; background: rgba(2, 6, 18, .9); border: 1px solid var(--border);
-        font-size: 11.5px; max-height: 190px; overflow: auto; color: #bfe6ff; }
-  .result { border-radius: 12px; padding: 12px 14px; margin-top: 10px; border: 1px dashed rgba(255, 199, 106, .45);
-            background: rgba(255, 199, 106, .06); }
-  .result b { color: var(--warn); }
-  .missing { color: var(--warn); }
-  .help { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 13px; }
-  .help dt { font-weight: 650; }
-  .help dd { margin: 0; color: var(--muted); }
+  /* ---------------------------------------------------------------- page 3 */
+  .summary { display: flex; gap: 0; margin: 34px 0 40px; }
+  .summary div { padding: 0 28px; text-align: left; }
+  .summary div + div { border-left: 1px solid var(--line); }
+  .summary small { display: block; color: var(--muted); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+  .summary b { font-weight: 400; font-size: 18px; }
 
-  #cursor { position: fixed; left: 0; top: 0; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%;
-            border: 2px solid #dff6ff; box-shadow: 0 0 14px rgba(95, 212, 255, .7); pointer-events: none; display: none;
-            z-index: 40; transition: transform .08s, background .08s; }
-  #cursor.grab { background: var(--accent); border-color: var(--accent); transform: scale(.72); }
-  #cursor .ring { position: absolute; inset: -9px; border-radius: 50%;
+  /* ---------------------------------------------------------------- loader */
+  #loader { position: fixed; inset: 76px 0 0 0; z-index: 15; display: grid; place-items: center; opacity: 0;
+            transition: opacity .45s var(--ease); pointer-events: none; }
+  #loader.on { opacity: 1; pointer-events: auto; }
+  .loader-in { text-align: center; padding: 0 24px 60px; }
+  .loader-in h2 { font-size: clamp(30px, 3.6vw, 44px); letter-spacing: -.04em; margin: 12px 0 26px; }
+  #nn { display: block; margin: 0 auto; }
+  .loader-line { height: 22px; margin: 22px 0 14px; color: var(--muted); font-size: 15px; transition: opacity .35s var(--ease); }
+  .loader-bar { width: min(320px, 70vw); height: 2px; margin: 0 auto; border-radius: 1px; background: var(--line); overflow: hidden; }
+  .loader-bar i { display: block; height: 100%; width: 0; background: var(--mark); border-radius: 1px; }
+
+  /* ---------------------------------------------------------------- page 4: results */
+  #p4 { overflow-y: auto; overscroll-behavior: contain; }
+  .res { max-width: 1060px; margin: 0 auto; padding: 24px clamp(20px, 4vw, 48px) 90px; }
+  .res-head { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; color: var(--muted); font-size: 14px; }
+  .hero { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 40px; margin: 30px 0 30px; }
+  .verdict { font-size: clamp(44px, 6.4vw, 86px); line-height: .98; letter-spacing: -.05em; }
+  .hero .lede { margin-top: 18px; }
+  .bignum { text-align: right; }
+  .bignum strong { display: block; font-weight: 300; font-size: clamp(56px, 7.4vw, 104px); line-height: .9; letter-spacing: -.05em;
+                   font-variant-numeric: tabular-nums; }
+  .bignum span { color: var(--muted); font-size: 14px; }
+  .scale { margin: 6px 0 42px; }
+  .scale .track { position: relative; height: 2px; background: var(--line); border-radius: 1px; }
+  .scale .fill { position: absolute; left: 0; top: 0; height: 2px; background: var(--text); border-radius: 1px;
+                 transition: width 1.1s var(--ease); }
+  .scale .mark { position: absolute; top: -6px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--accent);
+                 transition: left 1.1s var(--ease); }
+  .scale .thr { position: absolute; top: -8px; width: 1px; height: 18px; background: var(--muted); left: 50%; }
+  .scale .ends { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-top: 14px;
+                 letter-spacing: .08em; text-transform: uppercase; }
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .facts div { padding: 22px 24px 22px 0; }
+  .facts div + div { padding-left: 24px; border-left: 1px solid var(--line); }
+  .facts small { display: block; color: var(--muted); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 8px; }
+  .facts b { font-weight: 400; font-size: 19px; letter-spacing: -.02em; }
+  .facts p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+  .ok { color: var(--up); } .miss { color: var(--down); }
+  .block { margin-top: 64px; }
+  .block > h3 { font-size: 30px; letter-spacing: -.035em; }
+  .block > p { color: var(--muted); margin: 8px 0 0; max-width: 640px; font-size: 14px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 56px; margin-top: 22px; }
+  .cols h4 { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding-bottom: 10px; }
+  .rows { border-top: 1px solid var(--line); }
+  .r { width: 100%; display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 14px; padding: 16px 0;
+       border-bottom: 1px solid var(--line); text-align: left; transition: background .2s; }
+  button.r:hover { background: var(--tint); }
+  .r.wide { grid-template-columns: 1fr auto; }
+  .r .k { font: 500 12px var(--mono); color: var(--muted); }
+  .r .m { min-width: 0; }
+  .r .m small { display: block; color: var(--muted); font-size: 13px; }
+  .r .v { font-variant-numeric: tabular-nums; font-size: 14px; padding: 4px 10px; border-radius: 8px; background: var(--tint); }
+  .r .v.up { color: var(--up); } .r .v.down { color: var(--down); }
+  .r .v.plain { background: none; color: var(--muted); padding: 0; }
+  .empty { color: var(--muted); padding: 16px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 26px; border-top: 1px solid var(--line); }
+  .stats div { padding: 22px 20px 0 0; }
+  .stats div + div { padding-left: 20px; border-left: 1px solid var(--line); }
+  .stats strong { display: block; font-weight: 300; font-size: 46px; letter-spacing: -.045em; line-height: 1; }
+  .stats span { display: block; color: var(--muted); font-size: 13px; margin-top: 10px; }
+  .note { color: var(--muted); font-size: 14px; margin: 26px 0 0; max-width: 720px; }
+  .means { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; margin-top: 22px; }
+  .means p { margin: 0; font-size: 15px; color: var(--text); }
+  .means p::before { content: ""; display: block; width: 24px; height: 1.5px; background: var(--mark); margin-bottom: 14px; }
+  .res-actions { display: flex; gap: 12px; justify-content: center; margin-top: 70px; }
+  details { margin: 36px auto 0; max-width: 680px; color: var(--muted); font-size: 13px; }
+  summary { cursor: pointer; text-align: center; }
+  pre { background: var(--tint); border-radius: 14px; padding: 16px; overflow: auto; max-height: 240px; font: 12px/1.5 var(--mono); }
+  .fade { opacity: 0; transform: translateY(10px); animation: rise .8s var(--ease) forwards; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  /* ---------------------------------------------------------------- hand cursor, menu, toasts */
+  #cursor { position: fixed; left: 0; top: 0; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%;
+            border: 1.5px solid var(--text); pointer-events: none; display: none; z-index: 40; transition: transform .12s, background .12s; }
+  #cursor.grab { background: var(--accent); border-color: var(--accent); transform: scale(.6); }
+  #cursor .ring { position: absolute; inset: -7px; border-radius: 50%;
                   background: conic-gradient(var(--accent) calc(var(--p, 0) * 1turn), transparent 0);
-                  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
-                  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px)); }
-  #menu { position: fixed; left: 0; top: 0; width: 300px; height: 300px; margin: -150px 0 0 -150px; display: none;
+                  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+                  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px)); }
+  #menu { position: fixed; left: 0; top: 0; width: 290px; height: 290px; margin: -145px 0 0 -145px; display: none;
           z-index: 30; pointer-events: none; }
-  #menu .disc { position: absolute; inset: 0; border-radius: 50%; background: rgba(8, 16, 40, .9);
-                border: 1px solid rgba(95, 212, 255, .35); box-shadow: 0 0 40px rgba(47, 140, 255, .35); }
-  #menu .item { position: absolute; width: 104px; margin: -17px 0 0 -52px; padding: 7px 0; border-radius: 999px;
-                text-align: center; font-weight: 650; font-size: 13px; }
-  #menu .item.on { background: var(--accent); color: var(--accent-ink); box-shadow: 0 0 16px rgba(95, 212, 255, .7); }
-  #menu .hub { position: absolute; left: 50%; top: 50%; width: 76px; height: 76px; margin: -38px 0 0 -38px; border-radius: 50%;
-               background: var(--bg); display: grid; place-items: center; color: var(--muted); font-size: 12px; }
-  #menu .hint { position: absolute; left: 0; right: 0; top: 100%; margin-top: 10px; text-align: center; font-size: 12.5px; }
-  #toasts { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); display: grid; gap: 8px;
-            justify-items: center; z-index: 50; pointer-events: none; }
-  .toast { background: rgba(10, 22, 52, .95); border: 1px solid rgba(95, 212, 255, .35); padding: 8px 16px; border-radius: 999px;
-           animation: toast 2.6s forwards; white-space: nowrap; box-shadow: 0 0 20px rgba(47, 140, 255, .25); }
-  @keyframes toast { 0% { opacity: 0; transform: translateY(8px); } 8%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  #menu .disc { position: absolute; inset: 0; border-radius: 50%; background: var(--panel);
+                backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+  #menu .item { position: absolute; width: 100px; margin: -16px 0 0 -50px; padding: 7px 0; border-radius: 999px;
+                text-align: center; font-size: 13px; transition: background .2s, color .2s; }
+  #menu .item.on { background: var(--accent); color: var(--accent-ink); }
+  #menu .hub { position: absolute; left: 50%; top: 50%; width: 70px; height: 70px; margin: -35px 0 0 -35px; border-radius: 50%;
+               display: grid; place-items: center; color: var(--muted); font-size: 12px; background: var(--tint); }
+  #toasts { position: fixed; left: 50%; bottom: 104px; transform: translateX(-50%); display: grid; gap: 8px; justify-items: center;
+            z-index: 50; pointer-events: none; }
+  .toast { padding: 9px 18px; border-radius: 999px; background: var(--panel); backdrop-filter: blur(14px);
+           -webkit-backdrop-filter: blur(14px); font-size: 14px; animation: toast 2.6s var(--ease) forwards; white-space: nowrap; }
+  @keyframes toast { 0% { opacity: 0; transform: translateY(6px); } 10%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+
+  @media (max-width: 860px) {
+    .top { grid-template-columns: auto 1fr; height: auto; padding-top: 14px; padding-bottom: 10px; row-gap: 10px; }
+    .steps { grid-row: 2; grid-column: 1 / -1; }
+    .hand span { display: none; }
+    .page, #loader { inset: 108px 0 0 0; }
+    .region { top: auto; bottom: 120px; transform: none; left: 20px; right: 20px; width: auto; }
+    .p2-foot { grid-template-columns: 1fr; justify-items: center; }
+    .hints, .legend { display: none; }
+    .hero, .cols, .means { grid-template-columns: 1fr; }
+    .bignum { text-align: left; }
+    .facts, .stats { grid-template-columns: 1fr 1fr; }
+    .facts div + div, .stats div + div { border-left: 0; padding-left: 0; }
+    .summary { flex-direction: column; gap: 16px; }
+    .summary div + div { border-left: 0; }
+    .mgrid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
 </style>
 </head>
-<body>
-<div id="app">
-  <header>
-    <div class="logo">
-      <svg viewBox="0 0 32 32" fill="none" stroke="#5fd4ff" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
-        <path d="M16 6c-3-3-9-2-9 3-3 1-4 6-1 8-1 4 2 7 6 7 1 2 3 3 4 2V6z"/><path d="M16 6c3-3 9-2 9 3 3 1 4 6 1 8 1 4-2 7-6 7-1 2-3 3-4 2"/>
-        <circle cx="11" cy="13" r="1.6" fill="#fff"/><circle cx="21" cy="17" r="1.6" fill="#fff"/>
-      </svg>
-      Brain Explorer
-    </div>
-    <nav class="steps" aria-label="Workflow">
-      <button data-step="1"><b>1</b>Input</button>
-      <button data-step="2"><b>2</b>Explore</button>
-      <button data-step="3"><b>3</b>Analyze</button>
-    </nav>
-    <div class="spacer"></div>
-    <span id="src" class="pill">No patient chosen</span>
-    <span id="handPill" class="pill"><i></i><span>Connecting</span></span>
-  </header>
-
-  <div id="stage">
-    <canvas id="gl" aria-label="Transparent 3D brain with EEG regions lit by strength"></canvas>
-    <div id="labels"></div>
-    <div id="zoomGauge" class="overlay">Hand distance zoom<div class="track"><div class="fill" id="zoomFill"></div></div>
-      <div class="ends"><span>far</span><span>close</span></div></div>
-    <div id="legend" class="overlay"></div>
-    <div id="empty" class="overlay"></div>
+<body data-page="1">
+<div class="bg bg-dark"></div><div class="bg bg-light"></div><div class="bg bg-deep"></div>
+<header class="top">
+  <div></div>
+  <nav class="steps" aria-label="Steps">
+    <button data-go="1"><span>01</span>Select</button>
+    <button data-go="2"><span>02</span>Explore</button>
+    <button data-go="3"><span>03</span>Predict</button>
+  </nav>
+  <div class="tools">
+    <span class="hand" id="handPill"><i></i><span>Connecting</span></span>
+    <button class="theme" id="themeBtn" aria-label="Switch theme">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+    </button>
   </div>
+</header>
 
-  <aside id="panel"></aside>
+<canvas id="gl" aria-label="3D brain; lit regions show the selected patient's data"></canvas>
+<div id="labels"></div>
+
+<main>
+  <section class="page center on" id="p1" aria-label="Choose a patient">
+    <span class="tag">Held-out patients</span>
+    <h1 class="display">Choose a patient</h1>
+    <p class="lede">Everyone in this list was kept out of the models' training, so the result is a genuine test.</p>
+    <div class="picker" id="picker">
+      <button class="picker-trigger" id="pickerBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="pickerList"></button>
+      <div class="picker-panel" id="pickerPanel" hidden>
+        <div class="ptabs" role="tablist" aria-label="Condition">
+          <button role="tab" data-cond="adhd">ADHD · EEG <em id="nAdhd"></em></button>
+          <button role="tab" data-cond="parkinsons">Parkinson's · Voice <em id="nPd"></em></button>
+        </div>
+        <input class="search" id="pickerFilter" type="search" autocomplete="off" placeholder="Search by patient number" aria-label="Search by patient number">
+        <ul class="plist" id="pickerList" role="listbox" tabindex="-1" aria-label="Held-out patients"></ul>
+      </div>
+    </div>
+    <button class="manual-toggle" id="manualBtn" aria-expanded="false" aria-controls="manualPanel">or input EEG values manually
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 6l4 4 4-4"/></svg></button>
+    <div class="manual" id="manualPanel" hidden>
+      <p>Amplitude of each channel over 2 seconds, in µV. These run through the ADHD model.</p>
+      <div class="mgrid" id="manualGrid"></div>
+      <div class="manual-foot"><span id="manualCount">0 of 19 channels</span><button id="manualClear">Clear</button></div>
+    </div>
+    <div class="confirm-wrap" id="confirmWrap">
+      <button class="cta" id="confirmBtn" data-go="2">Confirm
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+    </div>
+    <p class="status" id="p1Status"></p>
+  </section>
+
+  <section class="page" id="p2" aria-label="Explore the brain">
+    <div class="p2-head">
+      <span class="tag" id="p2Tag"></span>
+      <h2 id="p2Title"></h2>
+      <p id="p2Sub"></p>
+    </div>
+    <aside class="region" id="regionCard" hidden></aside>
+    <div class="p2-foot">
+      <div class="legend" id="legend"></div>
+      <button class="cta" data-go="3">Continue to prediction
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+      <div class="hints"><b>Fist</b> rotate · <b>Palm closer</b> zoom<br><b>Swipe</b> regions · <b>Open palm</b> menu</div>
+    </div>
+  </section>
+
+  <section class="page center" id="p3" aria-label="Run the prediction">
+    <span class="tag">Prediction</span>
+    <h1 class="display" id="p3Title">Ready to predict</h1>
+    <p class="lede" id="p3Lede"></p>
+    <div class="summary" id="p3Summary"></div>
+    <button class="cta" id="runBtn"></button>
+    <p class="status" id="runStatus"></p>
+    <button class="link" data-go="2">Back to the brain</button>
+  </section>
+
+  <section class="page" id="p4" aria-label="Analysis"><div class="res" id="results"></div></section>
+</main>
+
+<div id="loader" role="status" aria-live="polite">
+  <div class="loader-in">
+    <span class="tag" id="loaderTag"></span>
+    <h2 id="loaderTitle"></h2>
+    <canvas id="nn"></canvas>
+    <p class="loader-line" id="loaderLine"></p>
+    <div class="loader-bar"><i id="loaderFill"></i></div>
+  </div>
 </div>
 <div id="cursor"><div class="ring"></div></div>
-<div id="menu"><div class="disc"></div><div class="hub">close</div><div class="hint">Point at an item, then make a fist</div></div>
-<div id="toasts"></div>
+<div id="menu"><div class="disc"></div><div class="hub">close</div></div>
+<div id="toasts" aria-live="polite"></div>
 
 <script>
 "use strict";
 // Each condition has its own model server; the addresses arrive in the init message.
 // The patient lists hold only people from each model's test split, never seen in training.
 const CONDITIONS = {
-  adhd: { name: "ADHD", data: "EEG, 19 channels", person: "child", positive: "ADHD",
-          label: s => `Child ${s.subject}`, sub: s => `2-second window ${s.window} of ${s.windows}`,
-          count: l => `${l.samples.length} EEG windows from ${l.n_people} children` },
-  parkinsons: { name: "Parkinson's", data: "voice recording", person: "person", positive: "Parkinsons",
-                label: s => `Person ${s.person_id}`, sub: s => `recording ${s.recording} of ${s.recordings}`,
-                count: l => `${l.samples.length} voice recordings from ${l.n_people} people` },
+  adhd: { name: "ADHD", data: "EEG", person: "patient", positive: "ADHD", model: "ADHD model",
+          label: s => s.patient ? `Patient ${s.patient}` : s.label, sub: s => `EEG window ${s.window} of ${s.windows}`,
+          count: n => `${n} EEG windows` },
+  parkinsons: { name: "Parkinson's", data: "Voice", person: "patient", positive: "Parkinsons", model: "Parkinson's model",
+                label: s => s.patient ? `Patient ${s.patient}` : s.label, sub: s => `Voice recording ${s.recording} of ${s.recordings}`,
+                count: n => `${n} voice recordings` },
 };
 // The Parkinson's data is a voice recording, not EEG, so none of it maps to an electrode. These sites sit
 // over the areas that plan, produce and monitor speech, and are lit for reference only.
@@ -238,6 +424,21 @@ const MEANING = {
   parkinsons: ["This is a research demonstration based on one voice recording. It is not a diagnosis.",
                "Parkinson's is diagnosed by a neurologist from movement signs such as slowness, tremor and stiffness. Softer, flatter or hoarser speech is common and can appear early.",
                "If you notice these changes, see a doctor. Medication, exercise and speech therapy help many people."],
+};
+const LOADER_LINES = {
+  adhd: ["Reading 19 EEG channels", "Scaling against the training group", "Running the neural network",
+         "Measuring what drove the result", "Preparing the analysis"],
+  parkinsons: ["Loading 753 voice features", "Comparing with the training group", "Running the gradient-boosted model",
+               "Asking the second model", "Preparing the analysis"],
+};
+const LOADER_MS = 5600;
+// Hologram colours. Dark mode adds light on a navy stage; light mode lays a thin, see-through blue over the pale
+// page (a low gain keeps the dense mesh from building up into a solid shell).
+const HOLO = {
+  dark: { mode: 0, gain: 1.0, deep: [0.04, 0.20, 0.55], edge: [0.32, 0.78, 1.0], glowLo: [0.20, 0.62, 1.0], glowHi: [1, 1, 1],
+          sparkLo: [0.35, 0.75, 1.0], sparkHi: [1, 1, 1], line: [0.55, 0.85, 1.0] },
+  light: { mode: 1, gain: 0.32, deep: [0.10, 0.30, 0.72], edge: [0.04, 0.36, 0.95], glowLo: [0.10, 0.60, 1.0], glowHi: [0.0, 0.36, 1.0],
+           sparkLo: [0.20, 0.62, 1.0], sparkHi: [0.0, 0.34, 1.0], line: [0.12, 0.42, 0.90] },
 };
 
 // ======================================================================= math
@@ -278,6 +479,7 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 const toGL = (x, y, z) => [-x, z, y]; // head (x right ear, y nose, z up) -> GL (x screen right, y up, z toward viewer)
 const rng = (() => { let s = 20261024; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+const hashStr = s => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 
 // 3D simplex noise (after Stefan Gustavson's public-domain reference), fixed seed.
 const noise = (() => {
@@ -350,8 +552,8 @@ function computeNormals(pos, idx) {
   return n;
 }
 
-// Cerebrum radius along a head-space direction. Without detail it is the smooth
-// envelope used to place region lights; with detail it adds the fissures and folds.
+// Cerebrum radius along a head-space direction. Without detail it is the smooth envelope used to place
+// region lights; with detail it adds the fissures and folds.
 function brainShape(d, detail) {
   const [x, y, z] = d;
   const ax = 0.70 * (1 - 0.10 * Math.max(y, 0) + 0.04 * Math.max(-y, 0)), ay = 0.90, az = z > 0 ? 0.66 : 0.48;
@@ -392,9 +594,10 @@ function buildCerebellum() {
   return { pos, index, edges: edgesOf(index), normals: computeNormals(pos, index), glow };
 }
 function buildStem() {
-  const seg = 24, rings = 12, pos = [], idx = [];
+  const seg = 28, rings = 18, pos = [], idx = [];
   for (let r = 0; r <= rings; r++) {
-    const t = r / rings, cy = -0.18 - 0.07 * t, cz = -0.28 - 0.70 * t, rad = 0.15 - 0.05 * t;
+    const t = r / rings, cy = -0.16 - 0.12 * t * t, cz = -0.26 - 0.48 * t;
+    const rad = (0.14 - 0.045 * t) * (t > 0.82 ? Math.sqrt(Math.max(0, 1 - ((t - 0.82) / 0.18) ** 2)) : 1);
     for (let s = 0; s < seg; s++) { const a = s / seg * Math.PI * 2; pos.push(...toGL(Math.cos(a) * rad, cy + Math.sin(a) * rad * 0.8, cz)); }
   }
   for (let r = 0; r < rings; r++) for (let s = 0; s < seg; s++) {
@@ -407,8 +610,9 @@ function buildStem() {
 }
 
 // ===================================================================== WebGL
-// Everything is drawn additively without depth testing, so the brain reads as a
-// glowing transparent shell and the region lights show through from behind.
+// The hologram is drawn without depth testing, so the brain reads as a glowing transparent shell and the
+// region lights show through from behind. Shaders output premultiplied colour: dark mode blends additively,
+// light mode blends "over" with deep blues so the same scene reads on a pale page.
 const canvas = document.getElementById("gl");
 const gl = canvas.getContext("webgl2", { antialias: true, alpha: true, premultipliedAlpha: true });
 const HOLO_VS = `#version 300 es
@@ -420,15 +624,17 @@ void main() { vec4 w = uModel * vec4(aPos, 1.0); vW = w.xyz; vN = mat3(uModel) *
 const HOLO_FS = `#version 300 es
 precision highp float;
 in vec3 vN, vW; in vec4 vGlow;
-uniform vec3 uEye; uniform float uBody, uRim, uGlow;
+uniform vec3 uEye, uDeep, uEdge, uGlowLo, uGlowHi; uniform float uBody, uRim, uGlow, uGain, uMode;
 out vec4 o;
 void main() {
   vec3 N = normalize(vN), V = normalize(uEye - vW);
   float fres = pow(1.0 - abs(dot(N, V)), 2.2);
   float near = 0.5 + 0.5 * smoothstep(-1.0, 0.9, vW.z);
-  vec3 tint = mix(vec3(0.04, 0.20, 0.55), vec3(0.32, 0.78, 1.0), fres);
-  vec3 c = tint * (uBody * mix(0.18, 1.55, vGlow.a) + uRim * fres) * near + vGlow.rgb * uGlow * (0.45 + 0.55 * near);
-  o = vec4(c, max(c.r, max(c.g, c.b)));
+  float shell = (uBody * mix(0.18, 1.55, vGlow.a) + uRim * fres) * near * uGain;
+  float g = vGlow.r * uGlow * (0.45 + 0.55 * near);
+  vec3 c = mix(uDeep, uEdge, fres) * shell + mix(uGlowLo, uGlowHi, clamp(vGlow.r * 0.75, 0.0, 1.0)) * g;
+  float a = uMode < 0.5 ? max(c.r, max(c.g, c.b)) : clamp(shell + g, 0.0, 1.0);
+  o = vec4(c, a);
 }`;
 const SPARK_VS = `#version 300 es
 layout(location=0) in vec3 aPos; layout(location=1) in float aSize; layout(location=2) in float aBright;
@@ -442,14 +648,14 @@ void main() {
 }`;
 const SPARK_FS = `#version 300 es
 precision highp float;
-in float vB; out vec4 o;
+in float vB; uniform vec3 uLo, uHi; uniform float uMode; out vec4 o;
 void main() {
   vec2 p = gl_PointCoord * 2.0 - 1.0; float r2 = dot(p, p);
   float core = exp(-r2 * 22.0), halo = exp(-r2 * 4.0) * 0.42;
   float flare = exp(-abs(p.y) * 30.0) * exp(-abs(p.x) * 2.6) + exp(-abs(p.x) * 30.0) * exp(-abs(p.y) * 2.6);
-  float a = (core + halo + flare * 0.55) * vB;
-  vec3 c = mix(vec3(0.35, 0.75, 1.0), vec3(1.0), clamp(core * 1.4, 0.0, 1.0)) * a;
-  o = vec4(c, max(c.r, max(c.g, c.b)));
+  float a = clamp((core + halo + flare * 0.55) * vB, 0.0, 1.0);
+  vec3 c = mix(uLo, uHi, clamp(core * 1.4, 0.0, 1.0)) * a;
+  o = vec4(c, uMode < 0.5 ? max(c.r, max(c.g, c.b)) : a);
 }`;
 const LINE_VS = `#version 300 es
 layout(location=0) in vec3 aPos; layout(location=1) in float aAlpha;
@@ -462,8 +668,8 @@ void main() {
 }`;
 const LINE_FS = `#version 300 es
 precision highp float;
-in float vA; out vec4 o;
-void main() { vec3 c = vec3(0.55, 0.85, 1.0) * vA; o = vec4(c, max(c.r, max(c.g, c.b))); }`;
+in float vA; uniform vec3 uLine; uniform float uMode; out vec4 o;
+void main() { vec3 c = uLine * vA; o = vec4(c, uMode < 0.5 ? max(c.r, max(c.g, c.b)) : vA); }`;
 
 const P = {};
 function program(vs, fs, names) {
@@ -501,21 +707,32 @@ function upload(target, data) { gl.bindBuffer(gl.ARRAY_BUFFER, target.buf); gl.b
 
 // ================================================================ app state
 const $ = id => document.getElementById(id);
-const HOME = Q.norm(Q.mul(Q.axis([1, 0, 0], 0.22), Q.axis([0, 1, 0], -1.25))); // left side view, slightly from above
-const ROT_GAIN = 5.0, DMIN = 1.7, DMAX = 6.0;
+const HOME = Q.norm(Q.mul(Q.axis([1, 0, 0], 0.22), Q.axis([0, 1, 0], -1.25)));   // left side, slightly from above
+const HOME_DIST = 5.3, DMIN = 2.4, DMAX = 8.5, ROT_GAIN = 5.0;
 const MENU_ITEMS = [["Overview", "overview"], ["Strongest", "strongest"], ["Labels", "labels"],
-                    ["Network", "lines"], ["Hand zoom", "handzoom"], ["Analyze", "analyze"]];
-let brain, cere, stem, sparks, links;
+                    ["Network", "lines"], ["Hand zoom", "handzoom"], ["Predict", "analyze"]];
+let brain, cere, stem, sparks, links, theme = "dark";
 let montage = null, codes = [], eegOrder = [], cameraOn = false, gauss = null, plexus = [];
 let values = {}, strength = {}, order = [];
-let condition = "adhd", apis = {}, catalog = {}, catalogError = {}, sample = null;
+let condition = "adhd", pickerCond = "adhd", apis = {}, catalog = {}, catalogError = {}, patients = {}, sample = null;
 let analysis = null, analysisError = null, analyzing = false, lastRequest = null, pickerOpen = false, pickerFilter = "";
-let step = 1, selected = null, hovered = null, labelsOn = true, linesOn = true, handZoom = true;
-let rot = HOME.slice(), anim = null, vel = [0, 0], dist = 3.9, distTarget = 3.9, lastInput = 0, screen = {};
+let page = 1, selected = null, hovered = null, labelsOn = true, linesOn = true, handZoom = true;
+let xOff = 0, rot = HOME.slice(), anim = null, vel = [0, 0], dist = HOME_DIST, distTarget = HOME_DIST, lastInput = 0, screen = {};
 const hand = { present: false, x: 0.5, y: 0.5, grabbing: false, progress: 0, seen: 0 };
-const zoomCtl = { base: null, baseDist: 3.9, ema: null };
+const zoomCtl = { base: null, baseDist: HOME_DIST, ema: null };
 let drag = null, mouse = null, mdrag = null, menuOpen = false, menuAt = [0, 0], menuHover = -1;
 let dirtyGlow = true, dirtySparks = true;
+const cond = () => CONDITIONS[condition];
+const sampleName = s => s.custom ? s.label : `${cond().label(s)} · ${cond().sub(s)}`;
+
+// ======================================================================= theme
+function setTheme(t) {
+  theme = t; document.documentElement.dataset.theme = t;
+  $("themeBtn").setAttribute("aria-label", t === "dark" ? "Switch to light mode" : "Switch to dark mode");
+  try { localStorage.setItem("eegenius-theme", t); } catch (_) {}
+}
+$("themeBtn").onclick = () => setTheme(theme === "dark" ? "light" : "dark");
+try { const saved = localStorage.getItem("eegenius-theme"); if (saved === "light" || saved === "dark") setTheme(saved); } catch (_) {}
 
 // ============================================================ regions & data
 function regionPos(code, inset = 0.9) {   // light sits just inside the cortex under the electrode
@@ -535,9 +752,8 @@ function prepareRegions() {
   }
   buildNetwork();
 }
-// A decorative web like the reference image: a band of points around the brain,
-// joined to their neighbours, plus links from each region light to nearby points
-// and to its neighbouring regions. Line brightness follows region strength.
+// A band of points around the brain joined to their neighbours, plus links from each region light to nearby
+// points and to its neighbouring regions. Line brightness follows region strength.
 function buildNetwork() {
   plexus = [];
   for (let i = 0; i < 64; i++) {
@@ -546,13 +762,12 @@ function buildNetwork() {
   }
   const near = (p, list, k, maxD) => list.map((q, i) => [Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]), i])
     .filter(([d]) => d > 1e-6 && d < maxD).sort((a, b) => a[0] - b[0]).slice(0, k).map(([, i]) => i);
-  links = { ...links, pairs: [] };
+  links.pairs = [];
   const seen = new Set(), add = (kind, a, b) => { const key = `${kind}${Math.min(a, b)}-${Math.max(a, b)}`; if (!seen.has(key)) { seen.add(key); links.pairs.push([kind, a, b]); } };
   plexus.forEach((p, i) => near(p, plexus, 3, 0.55).forEach(j => add("pp", i, j)));
   const rp = codes.map(c => regionPos(c));
   rp.forEach((p, i) => { near(p, rp, 3, 0.9).forEach(j => add("rr", i, j)); near(p, plexus, 2, 0.8).forEach(j => add("rp", i, j)); });
 }
-
 // ADHD: each electrode's amplitude lights its region; the highest value in the recording is brightest.
 function setValues(next) {
   values = {};
@@ -565,29 +780,25 @@ function setValues(next) {
   if (selected && !(selected in strength)) selected = null;
   dirtyGlow = dirtySparks = true;
 }
-// Parkinson's: light the speech areas as a reference; the recording's measures are shown in the panel.
+// Parkinson's: light the speech areas as a reference; the recording's measures appear on the predict page.
 function setReference() {
   values = {}; strength = { ...SPEECH_AREAS };
   order = Object.keys(SPEECH_AREAS).sort((a, b) => SPEECH_AREAS[b] - SPEECH_AREAS[a]);
   if (selected && !(selected in strength)) selected = null;
   dirtyGlow = dirtySparks = true;
 }
+function clearInput() {
+  sample = null; analysis = null; values = {}; strength = {}; order = []; dirtyGlow = dirtySparks = true;
+  $("confirmWrap").classList.remove("show"); renderPicker(); renderNav();
+}
 function applySample(s) {
+  const changed = !sample || s.id !== sample.id || !!s.custom;
   sample = s; analysis = null; analysisError = null; lastRequest = null;
   select(null, false);
   if (condition === "adhd") setValues(s.data); else setReference();
-  updateSourcePill(); renderLegend(); renderPanel();
-}
-const cond = () => CONDITIONS[condition];
-const sampleName = s => s.custom ? s.label : `${cond().label(s)}, ${cond().sub(s)}`;
-function updateSourcePill() {
-  $("src").textContent = sample ? `${cond().name} · ${sampleName(sample)}` : "No patient chosen";
-}
-function renderLegend() {
-  $("legend").innerHTML = condition === "parkinsons" && sample
-    ? `Lit areas: where speech is produced and monitored<div class="row">Reference only: this data is a voice recording</div>`
-    : `Light = channel amplitude in this recording<div class="row"><span class="dot" style="width:8px;height:8px"></span>lower
-        <span class="dot" style="width:18px;height:18px"></span>higher</div>`;
+  if (changed) { rot = HOME.slice(); anim = null; distTarget = dist = HOME_DIST; }
+  renderPicker(); renderNav(); renderExplore(); renderPredict();
+  $("confirmWrap").classList.add("show");
 }
 const brightness = c => c in strength ? 0.12 + 0.88 * strength[c] : 0;
 
@@ -598,9 +809,7 @@ function updateGlow() {
   for (let v = 0; v < n; v++) {
     let s = 0;
     for (let j = 0, o = v * k; j < k; j++) s += gauss[o + j] * w[j];
-    s = Math.min(s, 1.5);
-    const white = Math.min(1, s * 0.75);
-    out[v * 4] = (0.20 + 0.80 * white) * s; out[v * 4 + 1] = (0.62 + 0.38 * white) * s; out[v * 4 + 2] = s;
+    out[v * 4] = Math.min(s, 1.5);
   }
   gl.bindBuffer(gl.ARRAY_BUFFER, brain.mesh.glowBuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, out);
   dirtyGlow = false;
@@ -639,7 +848,7 @@ function facing(code) {   // rotation that turns this region toward the viewer, 
   const g = glDir(code), yaw = Math.atan2(g[0], g[2]), pitch = Math.atan2(g[1], Math.hypot(g[0], g[2]));
   return Q.norm(Q.mul(Q.axis([1, 0, 0], pitch - 0.25), Q.axis([0, 1, 0], -yaw)));
 }
-function animateTo(q, d) { anim = { from: rot.slice(), to: q, t0: performance.now(), dur: 800 }; vel = [0, 0]; if (d && !handZoomActive()) distTarget = d; }
+function animateTo(q, d) { anim = { from: rot.slice(), to: q, t0: performance.now(), dur: 900 }; vel = [0, 0]; if (d && !handZoomActive()) distTarget = d; }
 function rotateBy(yaw, pitch) {
   rot = Q.norm(Q.mul(Q.axis([1, 0, 0], pitch), Q.mul(Q.axis([0, 1, 0], yaw), rot)));
   anim = null; lastInput = performance.now();
@@ -648,12 +857,10 @@ function select(code, announce = true) {
   if (code === selected) return;
   selected = code; lastInput = performance.now(); dirtyGlow = dirtySparks = true;
   if (code) {
-    animateTo(facing(code), Math.min(distTarget, 3.2));
-    if (step === 1 && code in strength) setStep(2);
-    if (announce) toast(`${montage[code].name} (${code})${code in values ? ` · strength ${Math.round(strength[code] * 100)}%`
-      : code in strength ? " · speech area (reference)" : ""}`);
+    animateTo(facing(code), Math.min(distTarget, 4.2));
+    if (announce) toast(`${montage[code].name} (${code})`);
   }
-  renderPanel();
+  renderRegion();
 }
 function stepRegion(dir) {
   if (!order.length) { toast("Choose a patient first"); return; }
@@ -661,21 +868,14 @@ function stepRegion(dir) {
   select(order[i < 0 ? (dir > 0 ? 0 : order.length - 1) : (i + dir + order.length) % order.length]);
 }
 function zoom(f) { if (handZoomActive()) return; distTarget = clamp(distTarget * f, DMIN, DMAX); lastInput = performance.now(); }
-function setStep(s) {
-  step = clamp(s, 1, 3);
-  document.querySelectorAll(".steps button").forEach(b => {
-    const n = +b.dataset.step; b.classList.toggle("on", n === step); b.classList.toggle("done", n < step);
-  });
-  renderPanel();
-}
 function runAction(a) {
   lastInput = performance.now();
-  if (a === "overview") { select(null, false); animateTo(HOME, 3.9); toast("Overview"); }
+  if (a === "overview") { select(null, false); animateTo(HOME, HOME_DIST); toast("Overview"); }
   else if (a === "strongest") { if (order.length) select(order[0]); else toast("Choose a patient first"); }
-  else if (a === "labels") { labelsOn = !labelsOn; toast(labelsOn ? "Labels on" : "Labels off"); }
-  else if (a === "lines") { linesOn = !linesOn; toast(linesOn ? "Network lines on" : "Network lines off"); }
-  else if (a === "handzoom") { handZoom = !handZoom; zoomCtl.base = null; toast(handZoom ? "Hand-distance zoom on" : "Hand-distance zoom off"); }
-  else if (a === "analyze") { if (step === 3) runAnalysis(); else setStep(3); }
+  else if (a === "labels") { labelsOn = !labelsOn; toast(labelsOn ? "All labels" : "Key labels only"); }
+  else if (a === "lines") { linesOn = !linesOn; toast(linesOn ? "Network on" : "Network off"); }
+  else if (a === "handzoom") { handZoom = !handZoom; zoomCtl.base = null; toast(handZoom ? "Hand zoom on" : "Hand zoom off"); }
+  else if (a === "analyze") { if (page === 3) runAnalysis(); else go(3); }
 }
 function pickAt(x, y) {   // nearest region light; front ones win over ones seen through the brain
   let best = null, bestD = 44;
@@ -686,14 +886,40 @@ function pickAt(x, y) {   // nearest region light; front ones win over ones seen
   return best;
 }
 
+// Pages: 1 select, 2 explore, 3 predict, 4 results (still step 03).
+function go(n) {
+  if (loader.on) return;
+  n = clamp(n, 1, 4);
+  if (n > 1 && !sample) { toast("Choose a patient first"); n = 1; }
+  if (n === 4 && !analysis) n = 3;
+  if (n !== 2 && menuOpen) closeMenu(true);
+  page = n; document.body.dataset.page = n;
+  for (let i = 1; i <= 4; i++) $("p" + i).classList.toggle("on", i === n);
+  setPicker(false);
+  renderNav();
+  if (n === 2) { renderExplore(); lastInput = performance.now(); }
+  if (n === 3) renderPredict();
+  if (n === 4) $("p4").scrollTop = 0;
+}
+function renderNav() {
+  document.querySelectorAll(".steps button").forEach(b => {
+    const n = +b.dataset.go;
+    b.classList.toggle("on", n === Math.min(page, 3));
+    b.disabled = n > 1 && !sample;
+  });
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-go]");
+  if (t && !t.disabled) go(+t.dataset.go);
+});
+
 // ======================================================= hand-distance zoom
-// Palm size in the camera image grows as the hand comes closer. Zoom follows the
-// change from where the hand was when it appeared, so there is no jump; at either
-// limit the reference slides so reversing direction responds at once.
-const handZoomActive = () => handZoom && cameraOn && handActive();
+// Palm size in the camera image grows as the hand comes closer. Zoom follows the change from where the
+// hand was when it appeared, so there is no jump; at either limit the reference slides so reversing responds at once.
+const handZoomActive = () => handZoom && cameraOn && handActive() && page === 2;
 function onHandDepth(size) {
-  if (!handZoom || !(size > 0)) return;
-  zoomCtl.ema = zoomCtl.ema == null ? size : zoomCtl.ema + (size - zoomCtl.ema) * 0.18;
+  if (!handZoom || !(size > 0) || page !== 2) return;
+  zoomCtl.ema = zoomCtl.ema == null ? size : zoomCtl.ema + (size - zoomCtl.ema) * 0.14;
   if (zoomCtl.base == null) { zoomCtl.base = zoomCtl.ema; zoomCtl.baseDist = distTarget; }
   const k = 1.6;
   let d = zoomCtl.baseDist / Math.pow(zoomCtl.ema / zoomCtl.base, k);
@@ -706,15 +932,16 @@ function onHandDepth(size) {
 
 // ======================================================================= menu
 function openMenu(x, y, fromKeyboard) {
+  if (page !== 2) { if (!fromKeyboard) send({ cmd: "close_menu" }); return; }   // the palm menu belongs to the brain page
   menuOpen = true; menuHover = -1;
-  menuAt = [clamp(x, 160, innerWidth - 160), clamp(y, 160, innerHeight - 190)];
+  menuAt = [clamp(x, 160, innerWidth - 160), clamp(y, 160, innerHeight - 160)];
   const m = $("menu"); m.style.display = "block"; m.style.transform = `translate(${menuAt[0]}px, ${menuAt[1]}px)`;
   if (fromKeyboard) send({ cmd: "open_menu" });
 }
 function closeMenu(tellEngine) { menuOpen = false; $("menu").style.display = "none"; if (tellEngine) send({ cmd: "close_menu" }); }
 function menuItemAt(x, y) {
   const dx = x - menuAt[0], dy = y - menuAt[1];
-  if (Math.hypot(dx, dy) < 40) return -1;
+  if (Math.hypot(dx, dy) < 38) return -1;
   const ang = (Math.atan2(dy, dx) * 180 / Math.PI + 90 + 360) % 360;
   return Math.round(ang / (360 / MENU_ITEMS.length)) % MENU_ITEMS.length;
 }
@@ -723,7 +950,7 @@ function buildMenu() {
   MENU_ITEMS.forEach(([label], i) => {
     const a = (-90 + i * 360 / MENU_ITEMS.length) * Math.PI / 180, el = document.createElement("div");
     el.className = "item"; el.textContent = label;
-    el.style.left = `${150 + Math.cos(a) * 104}px`; el.style.top = `${150 + Math.sin(a) * 104}px`;
+    el.style.left = `${145 + Math.cos(a) * 100}px`; el.style.top = `${145 + Math.sin(a) * 100}px`;
     m.appendChild(el);
   });
 }
@@ -733,8 +960,18 @@ const handActive = () => hand.present && performance.now() - hand.seen < 600;
 const handPx = (p = [hand.x, hand.y]) => [p[0] * innerWidth, p[1] * innerHeight];
 const pointer = () => handActive() ? handPx() : mouse;
 
+// A quick fist away from the brain presses whatever button is under the cursor, so every page works touch-free.
+function handTap(x, y) {
+  if (page === 2) { const code = pickAt(x, y); if (code || !hitControl(x, y)) { select(code); return; } }
+  hitControl(x, y)?.click();
+}
+function hitControl(x, y) {
+  const el = document.elementFromPoint(x, y);
+  return el && el.closest("button, [role=option], summary");
+}
 function onHandEvent(kind, data) {
   const now = performance.now();
+  if (loader.on && kind !== "hand_lost" && kind !== "hand_found") return;
   if (kind === "grab_start") {
     if (menuOpen) {
       const i = menuItemAt(...handPx(data.pos));
@@ -747,13 +984,14 @@ function onHandEvent(kind, data) {
     const dx = data.pos[0] - drag.x, dy = data.pos[1] - drag.y;
     drag.x = data.pos[0]; drag.y = data.pos[1]; drag.moved += Math.hypot(dx, dy);
     drag.v = [dx * ROT_GAIN, dy * ROT_GAIN];
-    rotateBy(drag.v[0], drag.v[1]);
+    if (page === 2) rotateBy(drag.v[0], drag.v[1]);
   } else if (kind === "grab_end" && drag) {
-    if (!data.cancelled && drag.moved < 0.035 && now - drag.t0 < 650) select(pickAt(...handPx(data.pos)));
-    else vel = drag.v;
+    if (!data.cancelled && drag.moved < 0.035 && now - drag.t0 < 650) handTap(...handPx(data.pos));
+    else if (page === 2) vel = drag.v;
     drag = null;
   } else if (kind === "swipe") {
-    ({ left: () => stepRegion(1), right: () => stepRegion(-1), up: () => setStep(step + 1), down: () => setStep(step - 1) })[data.direction]?.();
+    ({ left: () => page === 2 && stepRegion(1), right: () => page === 2 && stepRegion(-1),
+       up: () => page === 3 ? runAnalysis() : page < 3 && go(page + 1), down: () => go(page === 4 ? 2 : page - 1) })[data.direction]?.();
   } else if (kind === "menu_open") openMenu(...handPx(data.pos), false);
   else if (kind === "menu_close") closeMenu(false);
   else if (kind === "custom") toast(`Gesture: ${data.label}`);
@@ -786,319 +1024,362 @@ canvas.addEventListener("lostpointercapture", () => { mdrag = null; });
 canvas.addEventListener("wheel", e => { e.preventDefault(); zoom(Math.exp(e.deltaY * 0.0015)); }, { passive: false });
 addEventListener("keydown", e => {
   if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName) || e.target.closest?.(".picker")) return;
-  const k = e.key.toLowerCase(), acts = {
-    arrowright: () => stepRegion(1), arrowleft: () => stepRegion(-1), arrowup: () => zoom(0.8), arrowdown: () => zoom(1.25),
-    l: () => runAction("labels"), n: () => runAction("lines"), z: () => runAction("handzoom"), r: () => runAction("overview"),
-    1: () => setStep(1), 2: () => setStep(2), 3: () => setStep(3),
-    escape: () => menuOpen ? closeMenu(true) : select(null, false),
-    m: () => menuOpen ? closeMenu(true) : openMenu(innerWidth / 2, innerHeight / 2, true),
+  const k = e.key.toLowerCase(), on2 = f => () => page === 2 && f(), acts = {
+    arrowright: on2(() => stepRegion(1)), arrowleft: on2(() => stepRegion(-1)),
+    arrowup: on2(() => zoom(0.8)), arrowdown: on2(() => zoom(1.25)),
+    l: () => runAction("labels"), n: () => runAction("lines"), z: () => runAction("handzoom"), r: on2(() => runAction("overview")),
+    1: () => go(1), 2: () => go(2), 3: () => go(3), t: () => $("themeBtn").click(),
+    escape: () => menuOpen ? closeMenu(true) : pickerOpen ? setPicker(false) : select(null, false),
+    m: on2(() => menuOpen ? closeMenu(true) : openMenu(innerWidth / 2, innerHeight / 2, true)),
   };
   if (acts[k]) { e.preventDefault(); acts[k](); }
 });
-document.querySelectorAll(".steps button").forEach(b => b.onclick = () => setStep(+b.dataset.step));
-
 document.addEventListener("pointerdown", e => { if (pickerOpen && !e.target.closest(".picker")) setPicker(false); });
 
-// ===================================================================== panel
+// ===================================================================== text helpers
 const esc = s => String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
-const fmt = v => Number.isFinite(v) ? (Math.abs(v) >= 100 ? v.toFixed(0) : +v.toFixed(2)) : "-";
+const fmt = v => Number.isFinite(v) ? (Math.abs(v) >= 100 ? v.toFixed(0) : (+v.toFixed(1)).toString()) : "-";
 const num = v => !Number.isFinite(v) ? "-" : v === 0 ? "0" : Math.abs(v) >= 1000 ? v.toFixed(0)
-  : Math.abs(v) >= 1 ? +v.toFixed(2) : +v.toPrecision(3);
+  : Math.abs(v) >= 1 ? (+v.toFixed(2)).toString() : (+v.toPrecision(3)).toString();
 const pct = p => `${Math.round(p * 100)}%`;
-const pts = e => `${e > 0 ? "+" : ""}${(e * 100).toFixed(1)} pts`;
-const sd = z => `${Math.abs(z).toFixed(1)} SD ${z > 0 ? "above" : "below"}`;
-const groups = () => [["Midline", codes.filter(c => montage[c].side === "midline")],
-                      ["Left hemisphere", codes.filter(c => montage[c].side === "left")],
-                      ["Right hemisphere", codes.filter(c => montage[c].side === "right")]];
-const backTo = (s, label) => `<button data-act="${s}">${label}</button>`;
+const pts = e => `${e > 0 ? "+" : "−"}${Math.abs(e * 100).toFixed(1)} pts`;
+const sd = z => `${Math.abs(z).toFixed(1)} SD ${z > 0 ? "above" : "below"} average`;
+const ARROW = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>`;
+const CHEVRON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 6l4 4 4-4"/></svg>`;
 
-function renderPanel() {
-  const el = $("panel");
-  if (!montage) { el.innerHTML = `<div class="card"><h2>Waiting for the server</h2><p class="sub">Start everything with <code>python run.py</code> in the finalized folder.</p></div>`; return; }
-  const keep = el.dataset.step === String(step) ? el.scrollTop : 0;   // re-renders on the same step keep their scroll
-  el.innerHTML = step === 1 ? inputPanel() : step === 2 ? explorePanel() : analyzePanel();
-  el.dataset.step = step; el.scrollTop = keep;
-  wirePanel();
-  renderEmpty();
+// ===================================================================== page 1: patients
+// One entry per person. They are numbered in a fixed shuffled order, so neither dataset IDs nor diagnoses show
+// through the numbering, and each patient uses their middle recording (a fixed choice, not a picked one).
+function buildPatients(k) {
+  const list = catalog[k];
+  if (!list) return [];
+  const key = k === "adhd" ? "subject" : "person_id", part = k === "adhd" ? "window" : "recording", groups = new Map();
+  for (const s of list.samples) { if (!groups.has(s[key])) groups.set(s[key], []); groups.get(s[key]).push(s); }
+  return [...groups.keys()].sort((a, b) => hashStr(a) - hashStr(b)).map((id, i) => {
+    const rows = groups.get(id).sort((a, b) => a[part] - b[part]), rep = rows[Math.floor((rows.length - 1) / 2)];
+    return { n: i + 1, key: String(id), count: rows.length, sample: { ...rep, patient: i + 1 } };
+  });
 }
-
-// --------------------------------------------------------- step 1: patient
-function inputPanel() {
-  const c = cond(), list = catalog[condition], err = catalogError[condition];
-  const seg = `<div class="seg" role="tablist" aria-label="Condition">${Object.entries(CONDITIONS).map(([k, v]) =>
-    `<button role="tab" aria-selected="${k === condition}" class="${k === condition ? "on" : ""}" data-cond="${k}">${v.name}<span>${v.data}</span></button>`).join("")}</div>`;
-  let body;
-  if (err) body = `<div class="result"><b>Can't reach the ${c.name} model server.</b><div class="sub">${esc(err)}. Start everything with <code>python run.py</code> in the finalized folder.</div>
-      <div class="row"><button data-act="retry">Try again</button></div></div>`;
-  else if (!list) body = `<p class="sub">Loading held-out patients...</p>`;
-  else body = `<p class="sub" style="margin:0">${c.count(list)} that the model never saw in training. Pick one to fill in the values.</p>${pickerHtml()}`;
-  return `<div class="card"><h2>1 · Choose a patient</h2>${seg}${body}</div>
-    ${sample ? valuesCard() : ""}
-    <div class="row"><span class="grow"></span><button class="primary" data-act="toExplore" ${sample ? "" : "disabled"}>Explore on the brain</button></div>`;
-}
-function valuesCard() {
-  if (condition === "adhd") {
-    return `<div class="card"><h2>EEG values</h2><p class="note" style="margin:0 0 6px">Amplitude of each channel over 2 seconds (µV). These light the brain.</p>
-      ${groups().map(([g, list]) => `<h3>${g}</h3><div class="vals">${list.map(k =>
-        `<div class="val" title="${esc(montage[k].name)}"><b>${k}</b><span>${fmt(values[k])}</span></div>`).join("")}</div>`).join("")}</div>`;
-  }
-  const labels = (catalog.parkinsons && catalog.parkinsons.labels) || {};
-  return `<div class="card"><h2>Voice measures</h2><p class="note" style="margin:0 0 6px">27 headline features of this recording. The model reads all 753.</p>
-    <div class="vals wide">${Object.entries(sample.data).map(([k, v]) =>
-      `<div class="val"><b title="${esc(k)}">${esc(labels[k] || k)}</b><span>${num(v)}</span></div>`).join("")}</div></div>`;
-}
-
-// Dropdown: three options visible at a time, scroll for the rest, filter by ID.
-function pickerHtml() {
-  const c = cond();
-  return `<div class="picker">
-    <button class="picker-btn" id="pickerBtn" aria-haspopup="listbox" aria-expanded="${pickerOpen}" aria-controls="pickerList">
-      ${sample && !sample.custom ? `<span><b>${esc(c.label(sample))}</b><small>${esc(c.sub(sample))}</small></span>`
-        : `<span class="sub">Choose a held-out ${c.person}</span>`}
-      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-    </button>
-    <div class="picker-pop" ${pickerOpen ? "" : "hidden"}>
-      <input id="pickerFilter" type="search" autocomplete="off" aria-label="Filter by ID" value="${esc(pickerFilter)}"
-             placeholder="Filter by ID, e.g. ${condition === "adhd" ? "v286" : "053"}">
-      <ul role="listbox" id="pickerList" tabindex="-1" aria-label="Held-out patients">${optionsHtml()}</ul>
-      <div class="picker-count" id="pickerCount">${countText()}</div>
-    </div></div>`;
+function renderPicker() {
+  const c = CONDITIONS[condition];
+  $("pickerBtn").innerHTML = (sample && !sample.manual
+      ? `<span class="val"><b>${esc(c.label(sample))}</b><small>${esc(sample.custom ? "Sent from another program" : `${c.name} · ${c.sub(sample)}`)}</small></span>`
+      : `<span class="val ph">Select a patient</span>`) + CHEVRON;
+  $("nAdhd").textContent = patients.adhd ? patients.adhd.length : "";
+  $("nPd").textContent = patients.parkinsons ? patients.parkinsons.length : "";
+  document.querySelectorAll(".ptabs button").forEach(b => {
+    b.classList.toggle("on", b.dataset.cond === pickerCond); b.setAttribute("aria-selected", b.dataset.cond === pickerCond);
+  });
+  const err = catalogError[pickerCond], list = catalog[pickerCond];
+  $("p1Status").textContent = err ? `${CONDITIONS[pickerCond].name} model server not reachable (${err}). Start everything with run.py.`
+    : !list ? "Loading patients..." : "";
+  renderOptions();
 }
 const filtered = () => {
-  const f = pickerFilter.trim().toLowerCase(), all = catalog[condition].samples;
-  return f ? all.filter(s => s.id.toLowerCase().includes(f)) : all;
+  const list = patients[pickerCond] || [], f = pickerFilter.replace(/\D/g, "");
+  return f ? list.filter(p => String(p.n).startsWith(f)) : list;
 };
-const countText = () => `${filtered().length} of ${catalog[condition].samples.length}`;
-function optionsHtml() {
-  const c = cond();
-  return filtered().map(s => `<li role="option" id="opt-${s.id}" data-id="${s.id}" aria-selected="${!!sample && s.id === sample.id}">
-    <b>${esc(c.label(s))}</b><small>${esc(c.sub(s))}</small></li>`).join("") || `<li class="none">No match</li>`;
+function renderOptions() {
+  const c = CONDITIONS[pickerCond];
+  $("pickerList").innerHTML = filtered().map(p => `<li role="option" id="opt-${pickerCond}-${p.n}" data-n="${p.n}"
+      aria-selected="${!!sample && !sample.custom && condition === pickerCond && sample.patient === p.n}"><b>Patient ${p.n}</b><small>${esc(c.count(p.count))}</small></li>`).join("")
+    || `<li class="none">${catalog[pickerCond] ? "No match" : "Loading..."}</li>`;
+  $("pickerList").querySelectorAll("[data-n]").forEach(li => {
+    li.onclick = () => choose(+li.dataset.n);
+    li.onmousemove = () => { if (li !== activeOpt) setActive(li); };
+  });
 }
 let activeOpt = null;
 function setActive(li) {
   activeOpt?.classList.remove("active");
-  activeOpt = li && li.dataset.id ? li : null;
+  activeOpt = li && li.dataset.n ? li : null;
   if (activeOpt) { activeOpt.classList.add("active"); $("pickerList").setAttribute("aria-activedescendant", activeOpt.id); }
 }
 function setPicker(open) {
   pickerOpen = open;
-  const pop = document.querySelector(".picker-pop");
-  if (!pop) return;
-  pop.hidden = !open; $("pickerBtn").setAttribute("aria-expanded", open);
+  $("picker").classList.toggle("open", open); $("pickerPanel").hidden = !open;
+  $("pickerBtn").setAttribute("aria-expanded", open);
   if (open) {
-    const list = $("pickerList"), sel = list.querySelector('[aria-selected="true"]') || list.querySelector("[data-id]");
+    setManual(false);
+    const list = $("pickerList"), sel = list.querySelector('[aria-selected="true"]') || list.querySelector("[data-n]");
     setActive(sel); sel?.scrollIntoView({ block: "nearest" });
-    $("pickerFilter").focus();
+    $("pickerFilter").focus({ preventScroll: true });
   }
 }
 function pickerKeys(e) {
-  const opts = [...$("pickerList").querySelectorAll("[data-id]")];
+  const opts = [...$("pickerList").querySelectorAll("[data-n]")];
   if (e.key === "ArrowDown" || e.key === "ArrowUp") {
     e.preventDefault();
     const next = opts[clamp(opts.indexOf(activeOpt) + (e.key === "ArrowDown" ? 1 : -1), 0, opts.length - 1)];
     if (next) { setActive(next); next.scrollIntoView({ block: "nearest" }); }
-  } else if (e.key === "Enter" && activeOpt) { e.preventDefault(); choose(activeOpt.dataset.id); }
+  } else if (e.key === "Enter" && activeOpt) { e.preventDefault(); choose(+activeOpt.dataset.n); }
   else if (e.key === "Escape") { e.preventDefault(); setPicker(false); $("pickerBtn").focus(); }
 }
-function wireOptions() {
-  $("pickerList").querySelectorAll("[data-id]").forEach(li => {
-    li.onclick = () => choose(li.dataset.id);
-    li.onmousemove = () => { if (li !== activeOpt) setActive(li); };
-  });
+function choose(n) {
+  const p = (patients[pickerCond] || []).find(x => x.n === n);
+  if (!p) return;
+  condition = pickerCond;
+  setPicker(false);
+  applySample(p.sample);
 }
-function choose(id) {
-  const s = catalog[condition].samples.find(x => x.id === id);
-  if (!s) return;
-  pickerOpen = false;
-  applySample(s);
-  toast(`${cond().label(s)} · ${cond().sub(s)}`);
-}
-function switchCondition(k) {
-  if (k === condition) return;
-  condition = k; sample = null; analysis = null; analysisError = null; pickerOpen = false; pickerFilter = "";
-  select(null, false);
-  values = {}; strength = {}; order = []; dirtyGlow = dirtySparks = true;
-  updateSourcePill(); renderLegend(); renderPanel();
-  if (!catalog[k]) loadCatalog(k);
-}
+$("pickerBtn").onclick = () => setPicker(!pickerOpen);
+$("pickerFilter").oninput = e => { pickerFilter = e.target.value; renderOptions(); setActive($("pickerList").querySelector("[data-n]")); };
+$("pickerFilter").onkeydown = pickerKeys; $("pickerList").onkeydown = pickerKeys;
+document.querySelectorAll(".ptabs button").forEach(b => b.onclick = () => {
+  pickerCond = b.dataset.cond; pickerFilter = ""; $("pickerFilter").value = "";
+  renderPicker(); $("pickerList").scrollTop = 0; setActive($("pickerList").querySelector("[data-n]"));
+});
 async function loadCatalog(k) {
   catalogError[k] = null;
   try {
     const r = await fetch(`${apis[k]}/heldout-samples`);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     catalog[k] = await r.json();
+    patients[k] = buildPatients(k);
   } catch (e) {
-    catalogError[k] = e instanceof TypeError ? `No answer from ${apis[k] || "its address"}` : String(e.message || e);
+    catalogError[k] = e instanceof TypeError ? `no answer from ${apis[k] || "its address"}` : String(e.message || e);
   }
-  if (k === condition && step === 1) renderPanel();
+  renderPicker();
 }
 
-// --------------------------------------------------------- step 2: explore
-const handHelp = () => `<div class="card"><h2>Hand controls</h2><dl class="help">
-    <dt>Fist + move</dt><dd>Rotate the brain</dd>
-    <dt>Palm closer / further</dt><dd>Zoom in / out</dd>
-    <dt>Quick fist</dt><dd>Select the region under the cursor</dd>
-    <dt>Swipe left / right</dt><dd>Next / previous lit region</dd>
-    <dt>Swipe up / down</dt><dd>Next / previous step</dd>
-    <dt>Hold open palm</dt><dd>Menu: point, then make a fist</dd></dl>
-    <p class="note">Mouse: drag, click, scroll. Keys: arrows, 1-3 steps, M menu, L labels, N network, Z hand zoom, R reset.</p></div>`;
-const needPatient = title => `<div class="card"><h2>${title}</h2><p class="sub">Choose a held-out patient in step 1 first.</p>
-    <div class="row">${backTo("toInput", "Choose a patient")}</div></div>`;
+// Manual entry: 19 channel amplitudes, analysed by the ADHD model exactly like a held-out window.
+function buildManual() {
+  $("manualGrid").innerHTML = codes.map(c => `<label class="mf" title="${esc(montage[c].name)}"><span>${c}</span>
+      <input data-code="${c}" inputmode="decimal" autocomplete="off" placeholder="µV" aria-label="${esc(montage[c].name)} (${c}) in microvolts"></label>`).join("");
+  $("manualGrid").querySelectorAll("input").forEach(inp => inp.oninput = readManual);
+}
+function setManual(open) {
+  $("manualPanel").hidden = !open; $("manualBtn").setAttribute("aria-expanded", open);
+  if (open) { setPicker(false); readManual(); $("manualGrid").querySelector("input")?.focus({ preventScroll: true }); }
+}
+function readManual() {
+  const data = {};
+  $("manualGrid").querySelectorAll("input").forEach(inp => {
+    const t = inp.value.trim(), v = Number(t), ok = t !== "" && Number.isFinite(v) && v >= 0;
+    inp.parentElement.classList.toggle("bad", t !== "" && !ok);
+    if (ok) data[inp.dataset.code] = v;
+  });
+  const n = Object.keys(data).length;
+  $("manualCount").textContent = `${n} of ${codes.length} channels`;
+  if (n === codes.length) { condition = "adhd"; applySample({ custom: true, manual: true, label: "Manual input", data }); }
+  else if (sample && sample.manual) clearInput();
+}
+$("manualBtn").onclick = () => setManual($("manualPanel").hidden);
+$("manualClear").onclick = () => { $("manualGrid").querySelectorAll("input").forEach(i => i.value = ""); readManual(); };
 
-function explorePanel() {
-  if (!sample) return needPatient("2 · Explore") + handHelp();
-  const pd = condition === "parkinsons";
-  let focus;
-  if (!selected) {
-    focus = pd ? `<h2>2 · Explore</h2><div class="big">Speech areas</div>
-        <p class="sub">This Parkinson's data is a voice recording, not EEG, so it has no electrode positions. The lit areas are the parts of the brain that plan, produce and monitor speech, shown for reference. The recording's own measures are listed below.</p>`
-      : `<h2>2 · Explore</h2><div class="big">${order.length} regions lit</div>
-        <p class="sub">Brighter, larger lights mark channels with higher amplitude in this recording. Swipe left to visit them from the strongest down, or make a quick fist on a light.</p>`;
-  } else {
-    const m = montage[selected], has = selected in values;
-    focus = `<h2>Region</h2><div class="big">${esc(m.name)}</div><div class="sub">${selected} · ${m.side}</div>
-      <dl class="kv"><dt>Over</dt><dd>${esc(m.region)}</dd>
-        ${pd ? `<dt>In this data</dt><dd>Reference area, not measured</dd>`
-             : `<dt>Amplitude</dt><dd>${has ? fmt(values[selected]) + " µV" : "-"}</dd>
-                <dt>Rank</dt><dd>${has ? `${order.indexOf(selected) + 1} of ${order.length}` : "-"}</dd>`}</dl>
-      ${has ? `<div class="sub" style="margin-top:8px">Strength ${Math.round(strength[selected] * 100)}%</div><div class="meter"><i style="width:${Math.max(3, strength[selected] * 100)}%"></i></div>` : ""}
-      <p class="note">${esc(m.about)}${pd ? "" : " Scalp EEG blends activity from a few centimetres around the site."}</p>
-      <div class="row"><button data-act="overview">Overview</button></div>`;
-  }
-  const list = pd ? valuesCard()
-    : `<div class="card"><h2>Regions by strength</h2><div class="rank">${order.map(k => `<button data-sel="${k}" class="${k === selected ? "sel" : ""}">
-        <b>${k}</b><span class="meter"><i style="width:${Math.max(3, strength[k] * 100)}%"></i></span><span>${fmt(values[k])}</span></button>`).join("")}</div></div>`;
-  return `<div class="card">${focus}</div>${list}${handHelp()}
-    <div class="row">${backTo("toInput", "Change patient")}<span class="grow"></span><button class="primary" data-act="toAnalyze">Continue to analysis</button></div>`;
+// ===================================================================== page 2: explore
+function renderExplore() {
+  if (!sample) return;
+  const c = cond(), pd = condition === "parkinsons";
+  $("p2Tag").textContent = `${c.name} · ${c.data}`;
+  $("p2Title").textContent = c.label(sample);
+  $("p2Sub").textContent = sample.manual ? "Values entered by hand" : sample.custom ? "Sent from another program" : c.sub(sample);
+  $("legend").innerHTML = pd ? `Voice data has no electrode positions.<br>Lit: the brain's speech areas, for reference.`
+    : `Region brightness follows EEG amplitude<div class="dots"><span class="dot" style="width:9px;height:9px"></span>lower
+       <span class="dot" style="width:22px;height:22px"></span>higher</div>`;
+  renderRegion();
+}
+function renderRegion() {
+  const card = $("regionCard");
+  if (!selected || !montage) { card.hidden = true; return; }
+  const m = montage[selected], has = selected in values, pd = condition === "parkinsons";
+  card.innerHTML = `<span class="tag">${selected} · ${m.side}</span><h3>${esc(m.name)}</h3><div class="sub">${esc(m.region)}</div>
+    <dl>${pd ? `<dt>In this data</dt><dd>Reference only</dd>`
+      : `<dt>Amplitude</dt><dd>${has ? fmt(values[selected]) + " µV" : "-"}</dd>
+         <dt>Rank</dt><dd>${has ? `${order.indexOf(selected) + 1} of ${order.length}` : "-"}</dd>`}</dl>
+    ${has ? `<div class="bar"><i style="width:${Math.max(3, strength[selected] * 100)}%"></i></div>` : ""}
+    <p>${esc(m.about)}</p>`;
+  card.hidden = false;
 }
 
-// --------------------------------------------------------- step 3: analyze
-function analyzePanel() {
-  if (!sample) return needPatient("3 · Analyze");
+// ===================================================================== page 3: predict
+function renderPredict() {
+  if (!sample) return;
   const c = cond();
-  const head = `<div class="card"><h2>3 · Analyze</h2>
-      <dl class="kv" style="margin-top:0"><dt>Patient</dt><dd>${esc(sampleName(sample))}</dd>
-        <dt>Model</dt><dd>${condition === "adhd" ? "ADHD EEG model" : "Parkinson's voice model"}</dd></dl>
-      <div class="row"><button class="primary" data-act="predict" ${analyzing ? "disabled" : ""}>${analyzing ? "Analysing..."
-        : analysis ? "Run again" : `Run ${c.name} prediction`}</button></div>
-      ${analysisError ? `<div class="result"><b>The model could not answer.</b><div class="sub">${esc(analysisError)}</div></div>` : ""}</div>`;
-  const tail = `<div class="row">${backTo("toExplore", "Back to the brain")}</div>`;
-  if (!analysis) return head + `<div class="card"><p class="sub" style="margin:0">The model returns its prediction with an analysis: what drove it, how this recording compares with the people it learned from, and how reliable the model is.</p></div>` + tail;
-  return head + resultCards(analysis) + tail;
+  $("p3Title").textContent = "Ready to predict";
+  $("p3Lede").textContent = sample.manual ? "These values were entered by hand. The ADHD model will analyse them like any recording."
+    : sample.custom ? "This recording came from another program."
+    : `The ${c.model} has never seen this patient. It returns a prediction with a full analysis.`;
+  const facts = condition === "adhd"
+    ? [["Patient", c.label(sample)], ["Data", "19-channel EEG"], ["Strongest", order.slice(0, 3).join(", ") || "-"]]
+    : [["Patient", c.label(sample)], ["Data", "Voice, 753 features"], ["Pitch entropy", num(sample.data.PPE)], ["DFA", num(sample.data.EEG)]];
+  $("p3Summary").innerHTML = facts.map(([k, v]) => `<div><small>${esc(k)}</small><b>${esc(v)}</b></div>`).join("");
+  $("runBtn").disabled = analyzing;
+  $("runBtn").innerHTML = `Run ${c.name} prediction ${ARROW}`;
+  $("runStatus").textContent = analysisError || "";
 }
-function resultCards(a) {
-  const c = cond(), positive = a.prediction === c.positive, truth = a.person ? a.person.true_label : sample.true_label;
-  const margin = { low: "Close to the 50% line: the model is unsure about this one.",
-                   moderate: "A moderate lean one way.", high: "A clear lean, but check how reliable the model is below." }[a.margin];
-  const person = a.person ? `<p class="note">${condition === "adhd"
-      ? `Across all ${a.person.windows} windows from this child, the model averages ${pct(a.person.mean_probability)} and calls ${pct(a.person.share_positive)} of them ADHD.`
-      : `Across this person's ${a.person.recordings} recordings, the model averages ${pct(a.person.mean_probability)} and calls ${pct(a.person.share_positive)} of them Parkinson's.`}</p>` : "";
-  const hero = `<div class="card ${positive ? "pos" : ""}"><h2>Model result</h2>
-      <div class="big">${positive ? `${c.name} pattern` : "Control pattern"}</div>
-      <div class="prob"><div class="prob-bar"><i style="width:${(a.probability * 100).toFixed(1)}%"></i><span class="thr"></span></div>
-        <div class="prob-ends"><span>Control</span><b>${pct(a.probability)} ${c.name}</b><span>${c.name}</span></div></div>
-      <p class="sub" style="margin:4px 0 0">${margin}</p>
-      ${truth ? `<div class="truth ${truth === a.prediction ? "ok" : "miss"}"><b>${truth === a.prediction ? "Matches" : "Does not match"} the dataset label</b>
-        <span>This ${c.person} is labelled <b>${truth === c.positive ? c.name : "Control"}</b> in the dataset.</span></div>` : ""}
-      ${person}</div>`;
-  return hero + (condition === "adhd" ? adhdCards(a) : parkinsonsCards(a)) + trustCard(a) + meaningCard();
-}
-function adhdCards(a) {
-  const by = [...a.channels].sort((x, y) => y.effect - x.effect);
-  const row = x => `<button class="drv" data-sel="${x.code}"><b>${x.code}</b><span>${esc(montage[x.code].name)}<small>${fmt(x.value)} µV, typical ${fmt(x.typical)}</small></span>
-      <em class="${x.effect > 0 ? "up" : "down"}">${pts(x.effect)}</em></button>`;
-  const up = by.filter(x => x.effect > 0.005).slice(0, 5), down = by.filter(x => x.effect < -0.005).reverse().slice(0, 5);
-  const unusual = [...a.channels].filter(x => Math.abs(x.z) >= 1).sort((x, y) => Math.abs(y.z) - Math.abs(x.z)).slice(0, 6);
-  return `<div class="card"><h2>What drove this result</h2>
-      <p class="note" style="margin:0 0 6px">How far the result moves when one channel is swapped for the training group's typical value. Select a channel to see it on the brain.</p>
-      <h3>Toward ADHD</h3>${up.map(row).join("") || `<p class="sub">No channel pushed noticeably this way.</p>`}
-      <h3 style="margin-top:10px">Toward Control</h3>${down.map(row).join("") || `<p class="sub">No channel pushed noticeably this way.</p>`}</div>
-    <div class="card"><h2>Compared with the training group</h2>
-      ${unusual.length ? unusual.map(x => `<button class="drv" data-sel="${x.code}"><b>${x.code}</b><span>${sd(x.z)} the training average</span>
-        <em>${fmt(x.value)} µV</em></button>`).join("") : `<p class="sub">Every channel is within 1 SD of the training group's average.</p>`}</div>`;
-}
-function parkinsonsCards(a) {
-  const row = d => `<div class="drv static"><span>${esc(d.label)}<small>${esc(d.family)} · ${num(d.value)}, typical ${num(d.typical)}</small></span>
-      <em class="${d.effect > 0 ? "up" : "down"}">${pts(d.effect)}</em></div>`;
-  const unusual = a.key_features.filter(f => Math.abs(f.z) >= 1.5).sort((x, y) => Math.abs(y.z) - Math.abs(x.z)).slice(0, 6);
-  const so = a.second_opinion;
-  return `<div class="card"><h2>What drove this result</h2>
-      <p class="note" style="margin:0 0 6px">The voice features that moved the result most when swapped for the training group's typical value. Positive means toward Parkinson's.</p>
-      ${a.drivers.map(row).join("") || `<p class="sub">No single feature moved the result noticeably.</p>`}
-      <h3 style="margin-top:10px">By feature family</h3>
-      ${a.families.filter(f => Math.abs(f.effect) > 0.001).slice(0, 5).map(f => `<div class="drv static"><span>${esc(f.family)}</span><em class="${f.effect > 0 ? "up" : "down"}">${pts(f.effect)}</em></div>`).join("")}</div>
-    <div class="card"><h2>Compared with the training group</h2>
-      ${unusual.length ? unusual.map(f => `<div class="drv static"><span>${esc(f.label)}<small>${num(f.value)}</small></span><em>${sd(f.z)}</em></div>`).join("")
-        : `<p class="sub">All 27 headline measures are within 1.5 SD of the training group's average.</p>`}</div>
-    <div class="card"><h2>Second opinion</h2>
-      <p class="sub" style="margin:0">${esc(so.name)}: <b>${so.prediction === "Parkinsons" ? "Parkinson's" : "Control"} pattern</b> (${pct(so.probability)}). It is the weaker model (test AUC ${so.test_auc.toFixed(2)}), so the main result above takes precedence.</p></div>`;
-}
-function trustCard(a) {
-  const m = a.model, t = m.test, cv = m.cv, adhd = condition === "adhd";
-  const others = m.n_people.train + m.n_people.val;
-  return `<div class="card"><h2>How reliable is this model?</h2>
-    <dl class="kv" style="margin-top:0">
-      <dt>${adhd ? "Unseen children" : "Unseen people"}</dt><dd>${pct(t.accuracy)} right on ${t.n} ${adhd ? "2-second windows" : "recordings"} (AUC ${t.auc.toFixed(2)})</dd>
-      ${adhd ? `<dt>Per child</dt><dd>${pct(t.person_level_accuracy)} right when a child's windows are averaged</dd>` : ""}
-      <dt>Cross-validation</dt><dd>${pct(cv.accuracy.mean)} ± ${Math.round(cv.accuracy.std * 100)} on ${others} other ${adhd ? "children" : "people"}</dd>
-      <dt>Catches ${esc(cond().name)}</dt><dd>${pct(t.sensitivity)} of cases</dd>
-      <dt>Clears controls</dt><dd>${pct(t.specificity)} of healthy ${adhd ? "children" : "people"}</dd></dl>
-    <p class="note">${adhd && t.auc < 0.6 ? "On the 19 children it never saw, this model did about as well as chance. Treat its answer as a demonstration, not evidence."
-      : !adhd ? `Most recordings are from people with Parkinson's, so answering "Parkinson's" every time would already score ${pct(m.majority_baseline)}. The model catches most cases but wrongly flags about half of healthy people.` : ""}
-      ${esc(m.name)}, trained ${esc(m.trained_at.slice(0, 10))}, split ${esc(m.split)}.</p></div>`;
-}
-const meaningCard = () => `<div class="card"><h2>What this means</h2><ul class="info">${MEANING[condition].map(s => `<li>${esc(s)}</li>`).join("")}</ul>
-    ${lastRequest ? `<details><summary>Request sent to the model</summary><pre>${esc(JSON.stringify(lastRequest, null, 1))}</pre></details>` : ""}</div>`;
+$("runBtn").onclick = () => runAnalysis();
 
+// The model answers in well under a second; the loader gives the moment some weight and shows what happens.
 async function runAnalysis() {
-  if (!sample) { toast("Choose a patient first"); setStep(1); return; }
+  if (!sample) { toast("Choose a patient first"); go(1); return; }
   if (analyzing) return;
   analyzing = true; analysisError = null;
-  if (step !== 3) setStep(3); else renderPanel();
+  if (page !== 3) go(3); else renderPredict();
   lastRequest = condition === "adhd"
     ? { data: Object.fromEntries(eegOrder.map(k => [k, values[k]])), ...(sample.custom ? {} : { sample_id: sample.id }) }
     : { sample_id: sample.id };
-  try {
+  startLoader();
+  const call = (async () => {
     const r = await fetch(`${apis[condition]}/analyze`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(lastRequest) });
     const j = await r.json();
     if (!r.ok || j.error) throw new Error(j.error || `HTTP ${r.status}`);
+    return j;
+  })();
+  try {
+    const [j] = await Promise.all([call, new Promise(r => setTimeout(r, LOADER_MS))]);
     analysis = j;
-    toast(`${cond().name} model: ${j.prediction === cond().positive ? cond().name : "Control"} pattern (${pct(j.probability)})`);
   } catch (e) {
     analysisError = e instanceof TypeError ? `No answer from ${apis[condition]}. Is the model server running?` : String(e.message || e);
   }
-  analyzing = false; renderPanel();
+  analyzing = false;
+  await stopLoader();
+  if (analysis && !analysisError) { renderResults(analysis); go(4); } else renderPredict();
 }
 
-function wirePanel() {
-  const el = $("panel");
-  el.querySelectorAll("[data-act]").forEach(b => b.onclick = () => panelAction(b.dataset.act));
-  el.querySelectorAll("[data-sel]").forEach(b => b.onclick = () => select(b.dataset.sel));
-  el.querySelectorAll("[data-cond]").forEach(b => b.onclick = () => switchCondition(b.dataset.cond));
-  if ($("pickerBtn")) {
-    $("pickerBtn").onclick = () => setPicker(!pickerOpen);
-    $("pickerFilter").oninput = e => {
-      pickerFilter = e.target.value;
-      $("pickerList").innerHTML = optionsHtml(); $("pickerCount").textContent = countText();
-      wireOptions(); setActive($("pickerList").querySelector("[data-id]"));
-    };
-    $("pickerFilter").onkeydown = pickerKeys; $("pickerList").onkeydown = pickerKeys;
-    wireOptions();
-    if (pickerOpen) setPicker(true);
+// ===================================================================== loader
+const loader = { on: false, t0: 0, nodes: [], edges: [], pulses: [], last: 0, line: -1, W: 0, H: 0 };
+function startLoader() {
+  const c = cond(), cv = $("nn"), dpr = Math.min(devicePixelRatio || 1, 2);
+  const W = Math.min(620, innerWidth - 48), H = Math.min(260, innerHeight * 0.32);
+  Object.assign(loader, { on: true, t0: performance.now(), pulses: [], last: 0, line: -1, W, H, nodes: [], edges: [] });
+  cv.width = W * dpr; cv.height = H * dpr; cv.style.width = `${W}px`; cv.style.height = `${H}px`;
+  const layers = [9, 13, 13, 7, 1];
+  layers.forEach((n, li) => {
+    for (let i = 0; i < n; i++) loader.nodes.push({ li, e: 0, x: 24 + li * (W - 48) / (layers.length - 1),
+                                                  y: H / 2 + (i - (n - 1) / 2) * Math.min(19, (H - 30) / Math.max(1, n - 1)) });
+  });
+  loader.nodes.forEach((a, i) => loader.nodes.forEach((b, j) => { if (b.li === a.li + 1) loader.edges.push([i, j]); }));
+  $("loaderTag").textContent = c.model;
+  $("loaderTitle").textContent = `Analysing ${c.label(sample)}`;
+  $("loaderLine").textContent = ""; $("loaderFill").style.width = "0";
+  document.body.classList.add("loading"); $("loader").classList.add("on");
+  requestAnimationFrame(loaderFrame);
+}
+function stopLoader() {
+  loader.on = false;
+  document.body.classList.remove("loading"); $("loader").classList.remove("on");
+  return new Promise(r => setTimeout(r, 350));
+}
+function loaderFrame(now) {
+  if (!loader.on) return;
+  const cs = getComputedStyle(document.documentElement), text = cs.getPropertyValue("--text").trim(), mark = cs.getPropertyValue("--mark").trim();
+  const k = clamp((now - loader.t0) / LOADER_MS, 0, 1), cv = $("nn"), ctx = cv.getContext("2d"), dpr = cv.width / loader.W;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, loader.W, loader.H);
+  if (now - loader.last > 38) {   // send a signal along a random connection; later layers get busier as the run goes on
+    loader.last = now;
+    const pool = loader.edges.filter(([a]) => loader.nodes[a].li <= Math.floor(k * 4.2));
+    const e = pool[Math.floor(Math.random() * pool.length)];
+    if (e) loader.pulses.push({ e, t0: now, dur: 480 + Math.random() * 320 });
   }
+  ctx.lineWidth = 1; ctx.strokeStyle = text; ctx.globalAlpha = 0.07;
+  ctx.beginPath();
+  for (const [a, b] of loader.edges) { ctx.moveTo(loader.nodes[a].x, loader.nodes[a].y); ctx.lineTo(loader.nodes[b].x, loader.nodes[b].y); }
+  ctx.stroke();
+  loader.pulses = loader.pulses.filter(p => {
+    const t = (now - p.t0) / p.dur, A = loader.nodes[p.e[0]], B = loader.nodes[p.e[1]];
+    if (t >= 1) { B.e = 1; return false; }
+    const x = A.x + (B.x - A.x) * t, y = A.y + (B.y - A.y) * t, tx = A.x + (B.x - A.x) * Math.max(0, t - 0.18), ty = A.y + (B.y - A.y) * Math.max(0, t - 0.18);
+    const grad = ctx.createLinearGradient(tx, ty, x, y); grad.addColorStop(0, "transparent"); grad.addColorStop(1, mark);
+    ctx.globalAlpha = 0.9; ctx.strokeStyle = grad; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(x, y); ctx.stroke();
+    return true;
+  });
+  for (const n of loader.nodes) {
+    const out = n.li === 4, r = out ? 5 + 7 * k + 3 * n.e : 2.6 + 2.2 * n.e;
+    ctx.globalAlpha = 0.28 + 0.72 * Math.max(n.e, out ? k : 0); ctx.fillStyle = n.e > 0.15 || out ? mark : text;
+    ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI * 2); ctx.fill();
+    if (out) { ctx.globalAlpha = 0.25 * k; ctx.strokeStyle = mark; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(n.x, n.y, r + 8 + 4 * Math.sin(now / 240), 0, Math.PI * 2); ctx.stroke(); }
+    n.e *= 0.9;
+  }
+  ctx.globalAlpha = 1;
+  const lines = LOADER_LINES[condition], idx = Math.min(lines.length - 1, Math.floor(k * lines.length));
+  if (idx !== loader.line) {
+    loader.line = idx; const el = $("loaderLine");
+    el.style.opacity = 0; setTimeout(() => { el.textContent = lines[idx]; el.style.opacity = 1; }, 180);
+  }
+  $("loaderFill").style.width = `${k * 100}%`;
+  requestAnimationFrame(loaderFrame);
 }
-function panelAction(a) {
-  if (a === "toExplore") setStep(2);
-  else if (a === "toInput") setStep(1);
-  else if (a === "toAnalyze") setStep(3);
-  else if (a === "overview") runAction("overview");
-  else if (a === "predict") runAnalysis();
-  else if (a === "retry") { catalog[condition] = null; renderPanel(); loadCatalog(condition); }
+
+// ===================================================================== page 4: results
+function renderResults(a) {
+  const c = cond(), positive = a.prediction === c.positive, truth = a.person ? a.person.true_label : sample.true_label;
+  const margin = { low: "Close to the 50% line. The model is unsure about this one.",
+                   moderate: "A moderate lean one way.", high: "A clear lean. See below for how far to trust it." }[a.margin];
+  const adhd = condition === "adhd", m = a.model, t = m.test;
+  const facts = [];
+  if (truth) facts.push(`<div><small>Dataset label</small><b class="${truth === a.prediction ? "ok" : "miss"}">${truth === a.prediction ? "Matches" : "Does not match"}</b>
+      <p>Labelled ${truth === c.positive ? c.name : "Control"} in the dataset.</p></div>`);
+  if (a.person) facts.push(`<div><small>${adhd ? `All ${a.person.windows} windows` : `All ${a.person.recordings} recordings`}</small><b>${pct(a.person.mean_probability)} average</b>
+      <p>${pct(a.person.share_positive)} called ${c.name}.</p></div>`);
+  facts.push(`<div><small>Margin</small><b>${a.margin[0].toUpperCase() + a.margin.slice(1)}</b><p>${pct(Math.abs(a.probability - 0.5) * 2)} of the way from 50% to certain.</p></div>`);
+
+  let drivers, compare;
+  if (adhd) {
+    const by = [...a.channels].sort((x, y) => y.effect - x.effect);
+    const row = x => `<button class="r" data-region="${x.code}"><span class="k">${x.code}</span>
+        <span class="m">${esc(montage[x.code].name)}<small>${fmt(x.value)} µV · typical ${fmt(x.typical)}</small></span>
+        <span class="v ${x.effect > 0 ? "up" : "down"}">${pts(x.effect)}</span></button>`;
+    const up = by.filter(x => x.effect > 0.005).slice(0, 5), down = by.filter(x => x.effect < -0.005).reverse().slice(0, 5);
+    drivers = `<div class="cols"><div><h4>Toward ADHD</h4><div class="rows">${up.map(row).join("") || `<div class="empty">No channel pushed this way.</div>`}</div></div>
+      <div><h4>Toward Control</h4><div class="rows">${down.map(row).join("") || `<div class="empty">No channel pushed this way.</div>`}</div></div></div>`;
+    const unusual = [...a.channels].filter(x => Math.abs(x.z) >= 1).sort((x, y) => Math.abs(y.z) - Math.abs(x.z)).slice(0, 6);
+    compare = unusual.length ? `<div class="rows">${unusual.map(x => `<button class="r" data-region="${x.code}"><span class="k">${x.code}</span>
+        <span class="m">${esc(montage[x.code].name)}<small>${fmt(x.value)} µV</small></span><span class="v plain">${sd(x.z)}</span></button>`).join("")}</div>`
+      : `<div class="rows"><div class="empty">Every channel is within 1 SD of the training group's average.</div></div>`;
+  } else {
+    const row = d => `<div class="r wide"><span class="m">${esc(d.label)}<small>${esc(d.family)} · ${num(d.value)}, typical ${num(d.typical)}</small></span>
+        <span class="v ${d.effect > 0 ? "up" : "down"}">${pts(d.effect)}</span></div>`;
+    const fam = a.families.filter(f => Math.abs(f.effect) > 0.001).slice(0, 5);
+    drivers = `<div class="cols"><div><h4>Individual features</h4><div class="rows">${a.drivers.slice(0, 6).map(row).join("") || `<div class="empty">No single feature moved the result.</div>`}</div></div>
+      <div><h4>By feature family</h4><div class="rows">${fam.map(f => `<div class="r wide"><span class="m">${esc(f.family)}</span>
+        <span class="v ${f.effect > 0 ? "up" : "down"}">${pts(f.effect)}</span></div>`).join("") || `<div class="empty">No family moved the result.</div>`}</div></div></div>`;
+    const unusual = a.key_features.filter(f => Math.abs(f.z) >= 1.5).sort((x, y) => Math.abs(y.z) - Math.abs(x.z)).slice(0, 6);
+    const so = a.second_opinion;
+    compare = (unusual.length ? `<div class="rows">${unusual.map(f => `<div class="r wide"><span class="m">${esc(f.label)}<small>${num(f.value)}</small></span>
+        <span class="v plain">${sd(f.z)}</span></div>`).join("")}</div>`
+      : `<div class="rows"><div class="empty">All 27 headline voice measures are within 1.5 SD of the training group's average.</div></div>`)
+      + `<p class="note">Second opinion from a simpler model on the 27 headline features: ${so.prediction === "Parkinsons" ? "Parkinson's" : "Control"} pattern
+         (${pct(so.probability)}). It is weaker (test AUC ${so.test_auc.toFixed(2)}), so the result above takes precedence.</p>`;
+  }
+  const others = m.n_people.train + m.n_people.val;
+  const stats = [[pct(t.accuracy), `right on ${t.n.toLocaleString()} unseen ${adhd ? "2-second windows" : "recordings"}`],
+                 [t.auc.toFixed(2), "AUC on unseen people (0.5 is chance)"],
+                 adhd ? [pct(t.person_level_accuracy), "right per patient, windows averaged"] : [pct(t.sensitivity), "of Parkinson's cases caught"],
+                 [pct(m.cv.accuracy.mean), `cross-validation on ${others} other ${adhd ? "children" : "people"}`]];
+  const caution = adhd && t.auc < 0.6 ? "On the 19 children it never saw, this model did about as well as chance. Treat its answer as a demonstration, not evidence."
+    : !adhd ? `Most recordings come from people with Parkinson's, so answering "Parkinson's" every time would already score ${pct(m.majority_baseline)}. The model catches most cases but clears only ${pct(t.specificity)} of healthy people.` : "";
+  $("results").innerHTML = `
+    <div class="res-head fade"><span class="tag">Result</span><span>${esc(sampleName(sample))} · ${esc(c.model)}</span></div>
+    <div class="hero fade" style="animation-delay:.08s">
+      <div><h1 class="verdict">${positive ? `${c.name}<br>pattern` : "Control<br>pattern"}</h1><p class="lede">${margin}</p></div>
+      <div class="bignum"><strong data-count="${Math.round(a.probability * 100)}">0%</strong><span>${c.name} probability</span></div>
+    </div>
+    <div class="scale fade" style="animation-delay:.16s"><div class="track"><div class="fill" style="width:0"></div><span class="thr"></span><span class="mark" style="left:0"></span></div>
+      <div class="ends"><span>Control</span><span>50%</span><span>${c.name}</span></div></div>
+    <div class="facts fade" style="animation-delay:.24s">${facts.join("")}</div>
+    <section class="block fade" style="animation-delay:.32s"><h3>What drove this result</h3>
+      <p>How far the probability moves when one input is swapped for the training group's typical value.${adhd ? " Select a channel to see it on the brain." : ""}</p>${drivers}</section>
+    <section class="block"><h3>Compared with the training group</h3><p>Inputs that sit furthest from the people the model learned from.</p>${compare}</section>
+    <section class="block"><h3>How reliable is this model</h3>
+      <div class="stats">${stats.map(([v, l]) => `<div><strong>${v}</strong><span>${esc(l)}</span></div>`).join("")}</div>
+      <p class="note">${esc(caution)} ${esc(m.name)}, trained ${esc(m.trained_at.slice(0, 10))}, split ${esc(m.split)}.</p></section>
+    <section class="block"><h3>What this means</h3><div class="means">${MEANING[condition].map(s => `<p>${esc(s)}</p>`).join("")}</div></section>
+    <div class="res-actions"><button class="ghost" data-go="2">View on the brain</button><button class="cta" id="newBtn">New patient ${ARROW}</button></div>
+    <details><summary>Request sent to the model</summary><pre>${esc(JSON.stringify(lastRequest, null, 1))}</pre></details>`;
+  $("results").querySelectorAll("[data-region]").forEach(b => b.onclick = () => { go(2); select(b.dataset.region); });
+  $("newBtn").onclick = () => { go(1); setPicker(true); };
+  requestAnimationFrame(() => setTimeout(() => {   // ease the needle and number in once the page is visible
+    const p = a.probability * 100;
+    $("results").querySelector(".fill").style.width = `${p}%`;
+    $("results").querySelector(".mark").style.left = `${p}%`;
+    countUp($("results").querySelector("[data-count]"), Math.round(p));
+  }, 250));
 }
-function renderEmpty() {
-  const el = $("empty");
-  el.style.display = sample ? "none" : "block";
-  el.innerHTML = montage ? "Choose a held-out patient in step 1. The brain lights up with their recording." : "";
+function countUp(el, to) {
+  const t0 = performance.now(), dur = 1000;
+  const tick = now => { const k = clamp((now - t0) / dur, 0, 1), e = 1 - (1 - k) ** 3; el.textContent = `${Math.round(to * e)}%`; if (k < 1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
 }
 
 // ==================================================================== socket
@@ -1114,9 +1395,9 @@ function onMessage(m) {
   if (m.type === "init") {
     const first = !montage;
     montage = m.montage; cameraOn = m.camera; eegOrder = m.eegenius_order; apis = m.apis || {};
-    if (first) { prepareRegions(); buildLabels(); renderLegend(); setStep(1); Object.keys(CONDITIONS).forEach(loadCatalog); }
+    if (first) { prepareRegions(); buildLabels(); buildManual(); renderPicker(); Object.keys(CONDITIONS).forEach(loadCatalog); }
   } else if (m.type === "eeg" && montage) {   // a recording pushed by another program: analysed like any ADHD input
-    if (condition !== "adhd") switchCondition("adhd");
+    condition = pickerCond = "adhd";
     applySample({ custom: true, label: m.source === "external" ? `Sent by ${m.name}` : m.name,
                   data: Object.fromEntries(m.channels.map((c, i) => [c, m.frames[0][i]])) });
     toast(`Loaded ${m.name}`);
@@ -1127,11 +1408,10 @@ function onMessage(m) {
 }
 let statusKey = "";
 function setStatus() {
-  const [cls, text] = !wsOpen ? ["pill", "Server offline"] : !cameraOn ? ["pill idle", "Camera off: mouse and keys"]
-    : handActive() ? ["pill on", "Hand tracking"] : ["pill idle", "Show your hand"];
-  if (cls + text === statusKey) return;
-  statusKey = cls + text;
-  const pill = $("handPill"); pill.className = cls; pill.querySelector("span").textContent = text;
+  const [on, text] = !wsOpen ? [false, "Offline"] : !cameraOn ? [false, "Camera off"] : handActive() ? [true, "Hand tracking"] : [false, "Show your hand"];
+  if (on + text === statusKey) return;
+  statusKey = on + text;
+  $("handPill").classList.toggle("on", on); $("handPill").querySelector("span").textContent = text;
 }
 
 // ================================================================ labels, toasts
@@ -1144,7 +1424,7 @@ function toast(msg) {
   const el = document.createElement("div"); el.className = "toast"; el.textContent = msg;
   $("toasts").appendChild(el);
   setTimeout(() => el.remove(), 2600);
-  while ($("toasts").children.length > 3) $("toasts").firstChild.remove();
+  while ($("toasts").children.length > 2) $("toasts").firstChild.remove();
 }
 
 // ===================================================================== frame
@@ -1157,111 +1437,116 @@ function frame(now) {
   } else if (!drag && !mdrag && Math.hypot(...vel) > 1e-4) {
     rotateBy(vel[0], vel[1]); vel = vel.map(v => v * Math.pow(0.04, dt));
   } else if (!selected && now - lastInput > 8000 && !menuOpen) {
-    rot = Q.norm(Q.mul(Q.axis([0, 1, 0], 0.14 * dt), rot));    // idle turntable
+    rot = Q.norm(Q.mul(Q.axis([0, 1, 0], 0.12 * dt), rot));    // idle turntable
   }
-  dist += (distTarget - dist) * Math.min(1, dt * 7);
+  dist += (distTarget - dist) * Math.min(1, dt * 4.5);           // eased, so hand zoom glides rather than jumps
+  xOff += ((selected && page === 2 && innerWidth > 860 ? -0.45 : 0) - xOff) * Math.min(1, dt * 5);
 
-  const rect = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1;
-  if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
-    canvas.width = Math.round(rect.width * dpr); canvas.height = Math.round(rect.height * dpr);
+  const w = innerWidth, h = innerHeight, dpr = Math.min(devicePixelRatio || 1, 2);
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
   }
-  const aspect = rect.width / Math.max(1, rect.height), fov = 0.62, yOff = 0.10;
-  const proj = perspective(fov, aspect, 0.1, 50), view = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, yOff, -dist, 1], model = Q.mat(rot);
-  const p = pointer(), tf = 1 / Math.tan(fov / 2);
+  const aspect = w / Math.max(1, h), fov = 0.62, yOff = 0.05;
+  const proj = perspective(fov, aspect, 0.1, 50), view = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, xOff, yOff, -dist, 1], model = Q.mat(rot);
+  const p = pointer(), tf = 1 / Math.tan(fov / 2), pal = HOLO[theme];
 
-  // project region lights for labels and picking
-  screen = {};
-  if (montage) {
+  if (montage && page === 2) {
+    screen = {};
     for (const c of codes) {
-      const w = Q.rot(rot, regionPos(c)), vz = w[2] - dist;
-      screen[c] = { x: rect.left + (w[0] * tf / aspect / -vz * 0.5 + 0.5) * rect.width,
-                    y: rect.top + (0.5 - (w[1] + yOff) * tf / -vz * 0.5) * rect.height, front: Q.rot(rot, glDir(c))[2] > 0 };
+      const wp = Q.rot(rot, regionPos(c)), vz = wp[2] - dist;
+      screen[c] = { x: ((wp[0] + xOff) * tf / aspect / -vz * 0.5 + 0.5) * w, y: (0.5 - (wp[1] + yOff) * tf / -vz * 0.5) * h,
+                    front: Q.rot(rot, glDir(c))[2] > 0 };
     }
-    const h = p && !menuOpen ? pickAt(p[0], p[1]) : null;
-    if (h !== hovered) { hovered = h; dirtyGlow = dirtySparks = true; }
+    const hv = p && !menuOpen ? pickAt(p[0], p[1]) : null;
+    if (hv !== hovered) { hovered = hv; dirtyGlow = dirtySparks = true; }
     if (dirtyGlow) updateGlow();
     if (dirtySparks) updateSparks();
   }
 
-  gl.viewport(0, 0, canvas.width, canvas.height);
-  gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
-  gl.disable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
-  const t = now / 1000, common = (prog) => {
-    gl.useProgram(prog.p);
-    gl.uniformMatrix4fv(prog.u.uProj, false, proj); gl.uniformMatrix4fv(prog.u.uView, false, view);
-    gl.uniformMatrix4fv(prog.u.uModel, false, model);
-  };
-  common(P.holo); gl.uniform3fv(P.holo.u.uEye, [0, -yOff, dist]);
-  const holo = (m, body, rim, glow, wire) => {
-    gl.uniform1f(P.holo.u.uBody, body); gl.uniform1f(P.holo.u.uRim, rim); gl.uniform1f(P.holo.u.uGlow, glow);
-    const part = wire ? m.wire : m.tri;
-    gl.bindVertexArray(part.vao); gl.drawElements(wire ? gl.LINES : gl.TRIANGLES, part.count, gl.UNSIGNED_INT, 0);
-  };
-  holo(brain.mesh, 0.12, 0.40, 0.45, false);
-  holo(brain.mesh, 0.06, 0.16, 0.20, true);
-  holo(cere, 0.08, 0.14, 0, false); holo(cere, 0.06, 0.08, 0, true);
-  holo(stem, 0.07, 0.22, 0, false);
-  if (montage) {
-    if (linesOn) { common(P.line); gl.uniform1f(P.line.u.uTime, t); gl.bindVertexArray(links.vao); gl.drawArrays(gl.LINES, 0, links.count); }
-    common(P.spark); gl.uniform1f(P.spark.u.uTime, t); gl.uniform1f(P.spark.u.uPx, canvas.height * proj[5] / 2);
-    gl.bindVertexArray(sparks.vao); gl.drawArrays(gl.POINTS, 0, sparks.count);
-  }
-  gl.bindVertexArray(null);
+  if (page === 2) {
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.disable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE); gl.enable(gl.BLEND);
+    if (pal.mode === 0) gl.blendFunc(gl.ONE, gl.ONE); else gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    const t = now / 1000, use = prog => {
+      gl.useProgram(prog.p);
+      gl.uniformMatrix4fv(prog.u.uProj, false, proj); gl.uniformMatrix4fv(prog.u.uView, false, view);
+      gl.uniformMatrix4fv(prog.u.uModel, false, model);
+    };
+    use(P.holo);
+    gl.uniform3fv(P.holo.u.uEye, [-xOff, -yOff, dist]);
+    gl.uniform3fv(P.holo.u.uDeep, pal.deep); gl.uniform3fv(P.holo.u.uEdge, pal.edge);
+    gl.uniform3fv(P.holo.u.uGlowLo, pal.glowLo); gl.uniform3fv(P.holo.u.uGlowHi, pal.glowHi);
+    gl.uniform1f(P.holo.u.uGain, pal.gain); gl.uniform1f(P.holo.u.uMode, pal.mode);
+    const holo = (m, body, rim, glow, wire) => {
+      gl.uniform1f(P.holo.u.uBody, body); gl.uniform1f(P.holo.u.uRim, rim); gl.uniform1f(P.holo.u.uGlow, glow);
+      const part = wire ? m.wire : m.tri;
+      gl.bindVertexArray(part.vao); gl.drawElements(wire ? gl.LINES : gl.TRIANGLES, part.count, gl.UNSIGNED_INT, 0);
+    };
+    holo(brain.mesh, 0.12, 0.40, 0.45, false);
+    holo(brain.mesh, 0.06, 0.16, 0.20, true);
+    holo(cere.mesh, 0.08, 0.14, 0, false); holo(cere.mesh, 0.06, 0.08, 0, true);
+    holo(stem.mesh, 0.07, 0.22, 0, false);
+    if (montage) {
+      if (linesOn) {
+        use(P.line); gl.uniform1f(P.line.u.uTime, t); gl.uniform3fv(P.line.u.uLine, pal.line); gl.uniform1f(P.line.u.uMode, pal.mode);
+        gl.bindVertexArray(links.vao); gl.drawArrays(gl.LINES, 0, links.count);
+      }
+      use(P.spark); gl.uniform1f(P.spark.u.uTime, t); gl.uniform1f(P.spark.u.uPx, canvas.height * proj[5] / 2);
+      gl.uniform3fv(P.spark.u.uLo, pal.sparkLo); gl.uniform3fv(P.spark.u.uHi, pal.sparkHi); gl.uniform1f(P.spark.u.uMode, pal.mode);
+      gl.bindVertexArray(sparks.vao); gl.drawArrays(gl.POINTS, 0, sparks.count);
+    }
+    gl.bindVertexArray(null);
 
-  // labels
-  if (montage) {
-    const strong = new Set(order.slice(0, 3));
-    for (const c of codes) {
-      const s = screen[c], el = labelEls[c], sel = c === selected, hov = c === hovered, has = c in values;
-      const show = (labelsOn && (s.front || sel)) || sel || hov;
-      el.style.display = show ? "block" : "none";
-      if (!show) continue;
-      el.style.left = `${s.x - rect.left}px`; el.style.top = `${s.y - rect.top}px`;
-      el.style.opacity = s.front || sel || hov ? 1 : 0.55;
-      const named = sel || hov || strong.has(c), cls = "lbl" + (sel ? " sel" : strong.has(c) && has ? " strong" : "");
-      if (el.dataset.key !== cls + named) {
-        el.dataset.key = cls + named; el.className = cls;
-        el.innerHTML = `<b>${c}</b>${named ? `<span>${esc(montage[c].name)}</span>` : ""}`;
+    if (montage) {   // readable labels: every lit region on the near side, names for the one selected or hovered
+      const key = new Set(order.slice(0, 3));
+      for (const c of codes) {
+        const s = screen[c], el = labelEls[c], sel = c === selected, hov = c === hovered;
+        const show = sel || hov || (s.front && c in strength && (labelsOn || key.has(c)));
+        el.style.display = show ? "inline-flex" : "none";
+        if (!show) continue;
+        el.style.left = `${s.x}px`; el.style.top = `${s.y}px`; el.style.opacity = s.front || sel || hov ? 1 : 0.6;
+        el.style.zIndex = sel ? 3 : hov ? 2 : 1;
+        const named = sel || hov, cls = "lbl" + (sel ? " sel" : "");
+        if (el.dataset.key !== cls + named) {
+          el.dataset.key = cls + named; el.className = cls;
+          el.innerHTML = `<b>${c}</b>${named ? `<span>${esc(montage[c].name)}</span>` : ""}`;
+        }
       }
     }
   }
 
-  // hand cursor, menu hover, zoom gauge, status
   const cur = $("cursor");
   if (handActive()) {
     const [x, y] = handPx();
     cur.style.display = "block"; cur.style.left = `${x}px`; cur.style.top = `${y}px`;
-    cur.classList.toggle("grab", hand.grabbing); cur.style.setProperty("--p", hand.progress || 0);
+    cur.classList.toggle("grab", hand.grabbing); cur.style.setProperty("--p", page === 2 ? hand.progress || 0 : 0);
   } else cur.style.display = "none";
   if (menuOpen) {
     const q = p || menuAt, i = menuItemAt(q[0], q[1]);
     if (i !== menuHover) { menuHover = i; $("menu").querySelectorAll(".item").forEach((el, k) => el.classList.toggle("on", k === i)); }
   }
-  if (now - lastUi > 150) {
-    lastUi = now; setStatus();
-    $("zoomGauge").style.display = handZoomActive() ? "block" : "none";
-    $("zoomFill").style.width = `${(DMAX - dist) / (DMAX - DMIN) * 100}%`;
-  }
+  if (now - lastUi > 200) { lastUi = now; setStatus(); }
   requestAnimationFrame(frame);
 }
 
 // ====================================================================== start
 function start() {
-  renderPanel();
-  if (!gl) { $("empty").style.display = "block"; $("empty").textContent = "This browser has no WebGL 2, which the 3D brain needs."; return; }
-  P.holo = program(HOLO_VS, HOLO_FS, ["uProj", "uView", "uModel", "uEye", "uBody", "uRim", "uGlow"]);
-  P.spark = program(SPARK_VS, SPARK_FS, ["uProj", "uView", "uModel", "uPx", "uTime"]);
-  P.line = program(LINE_VS, LINE_FS, ["uProj", "uView", "uModel", "uTime"]);
+  renderPicker(); renderNav();
+  if (!gl) { $("p1Status").textContent = "This browser has no WebGL 2, which the 3D brain needs."; return; }
+  P.holo = program(HOLO_VS, HOLO_FS, ["uProj", "uView", "uModel", "uEye", "uDeep", "uEdge", "uGlowLo", "uGlowHi", "uBody", "uRim", "uGlow", "uGain", "uMode"]);
+  P.spark = program(SPARK_VS, SPARK_FS, ["uProj", "uView", "uModel", "uPx", "uTime", "uLo", "uHi", "uMode"]);
+  P.line = program(LINE_VS, LINE_FS, ["uProj", "uView", "uModel", "uTime", "uLine", "uMode"]);
   const b = buildBrain();
   brain = { ...b, mesh: holoMesh(b) };
-  cere = holoMesh(buildCerebellum()); stem = holoMesh(buildStem());
+  cere = { mesh: holoMesh(buildCerebellum()) }; stem = { mesh: holoMesh(buildStem()) };
   sparks = interleaved(5, [[0, 3], [1, 1], [2, 1]]);
   links = interleaved(4, [[0, 3], [1, 1]]);
-  buildMenu(); setStep(1);
+  buildMenu();
   if (location.protocol.startsWith("http")) connect();
   requestAnimationFrame(frame);
 }
-window.brainExplorer = { onMessage, state: () => ({ selected, hovered, order, step, dist: distTarget, menuOpen, rot, values, strength, handZoom }) };
+window.brainExplorer = { onMessage, go, state: () => ({ page, selected, hovered, order, dist: distTarget, menuOpen, rot, values, strength, handZoom, condition, sample }) };
 start();
 </script>
 </body>

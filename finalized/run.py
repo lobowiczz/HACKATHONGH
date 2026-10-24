@@ -49,7 +49,7 @@ def wait_ready(name, proc, url, timeout=120):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="EEGenius Brain Explorer: model servers + hand-tracked 3D viewer")
+    ap = argparse.ArgumentParser(description="Brain Explorer: model servers + hand-tracked 3D viewer")
     ap.add_argument("--adhd-port", type=int, default=8011)
     ap.add_argument("--parkinsons-port", type=int, default=8012)
     ap.add_argument("--port", type=int, default=8765, help="Brain Explorer page and gesture stream")

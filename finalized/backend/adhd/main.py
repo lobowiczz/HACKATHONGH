@@ -99,7 +99,7 @@ def get_model_info():
 
 @app.get("/")
 def read_root():
-    return {"message": "EEGenius ADHD API is operational.", "model_trained_at": model_card["trained_at"]}
+    return {"message": "ADHD API is operational.", "model_trained_at": model_card["trained_at"]}
 
 
 # --- 3. HELD-OUT PATIENTS + FULL ANALYSIS (used by the Brain Explorer) ---

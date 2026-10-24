@@ -178,7 +178,7 @@ def get_model_info_full():
 
 @app.get("/")
 def read_root():
-    return {"message": "EEGenius Parkinson's API is operational.", "model_trained_at": model_card["trained_at"]}
+    return {"message": "Parkinson's API is operational.", "model_trained_at": model_card["trained_at"]}
 
 
 # --- HELD-OUT PATIENTS + FULL ANALYSIS (used by the Brain Explorer) ---
